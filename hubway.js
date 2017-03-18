@@ -1,7 +1,7 @@
 // global variables
 var activeMarkers = [];
 var map;
-var CL = {data: []};
+var hubway = {data: []};
 
 var mapIconColors = {
     'Boston': 'red', 
@@ -11,12 +11,15 @@ var mapIconColors = {
 };
     
 var mapIcons = {};
+var mapIconsKMeans = [];
 Object.keys(mapIconColors).forEach(function(city) {
-    mapIcons[city] = 
-        L.divIcon({ 
+    var newIcon = L.divIcon({ 
             className: 'empty',
             html: '<div class="marker" style="background:' + mapIconColors[city] + '"></div>'
         });
+        
+    mapIcons[city] = newIcon;
+    mapIconsKMeans.push(newIcon);        
 });
 
 function addMarker(row) {
@@ -25,7 +28,8 @@ function addMarker(row) {
     var longitude = row.longitude;
     var description = row.station + ', ' + row['docksCount'] + ' bikes';
     
-    var myIcon = mapIcons[row['municipality']] ? mapIcons[row['municipality']] : mapIcons['default'];
+    // var myIcon = mapIcons[row['municipality']] ? mapIcons[row['municipality']] : mapIcons['default'];
+    var myIcon = mapIconsKMeans[row['municipalityKMeans']];
     
     var marker = L.marker([latitude, longitude], {icon: myIcon}).addTo(map);
     marker.bindPopup(description);
@@ -125,10 +129,10 @@ jQuery(function($) {
 	}).done(function(data) {
 	
 		// store to global variable
-		CL = data;
+		hubway = data;
 
         // add station markers
-        CL.data.forEach(function(row) {
+        hubway.data.forEach(function(row) {
             addMarker(row);
         });
         
