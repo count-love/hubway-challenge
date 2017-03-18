@@ -26,7 +26,7 @@ header + div, header + section {
 }
 
 #map {
-    
+    margin-top: 6em;
     height: 800px;
 }
 
