@@ -3,6 +3,21 @@ var activeMarkers = [];
 var map;
 var CL = {data: []};
 
+var mapIconColors = {
+    'Boston': 'red', 
+    'Cambridge': 'blue',
+    'Somerville': 'green',
+    'default': 'white'
+};
+    
+var mapIcons = {};
+Object.keys(mapIconColors).forEach(function(city) {
+    mapIcons[city] = 
+        L.divIcon({ 
+            className: 'empty',
+            html: '<div class="marker" style="background:' + mapIconColors[city] + '"></div>'
+        });
+});
 
 function addMarker(row) {
    
@@ -10,13 +25,15 @@ function addMarker(row) {
     var longitude = row.longitude;
     var description = row.station + ', ' + row['docksCount'] + ' bikes';
     
-    var marker = L.marker([latitude, longitude]).addTo(map);
+    var myIcon = mapIcons[row['municipality']] ? mapIcons[row['municipality']] : mapIcons['default'];
+    
+    var marker = L.marker([latitude, longitude], {icon: myIcon}).addTo(map);
     marker.bindPopup(description);
     marker.on('mouseover', function (e) {
             this.openPopup();
         });
     
-    activeMarkers.push(marker);
+    activeMarkers.push(marker);    
 }
 
 function removeMarkers() {
@@ -27,9 +44,27 @@ function removeMarkers() {
 
 function replaceMarkers(data) {
     removeMarkers();
+    
 	data.forEach(function(row) {
        addMarker(row);
 	});
+}
+
+function resizeMarkers() {
+
+    var currentZoom = map.getZoom();
+    var threshold = 13;
+
+    if (currentZoom >= threshold) { 
+        $(".marker").css('width', '10px');
+        $(".marker").css('height', '10px');
+        $(".marker").css('border-radius', '5px');
+
+    } else {
+        $(".marker").css('width', '8px');
+        $(".marker").css('height', '8px');
+        $(".marker").css('border-radius', '4px');        
+    }
 }
 
 function resetMapView() {
@@ -69,7 +104,11 @@ jQuery(function($) {
 	map = L.map('map', {
 		scrollWheelZoom: false
 	});
-	
+	    
+    map.on('zoomend', function() {
+        resizeMarkers();
+    });    
+        	    
     resetMapView();
 	
 	// specify OSM tiles
@@ -92,7 +131,7 @@ jQuery(function($) {
         CL.data.forEach(function(row) {
             addMarker(row);
         });
-
+        
 		// remove loading
 		setTimeout(function() { 
 		    loading.remove(); 
