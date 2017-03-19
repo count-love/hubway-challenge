@@ -3,7 +3,7 @@ var activeMarkers = [];
 var map;
 var hubway = {data: []};
 
-var cssColors = ['black','silver','gray','white','maroon','red','purple','fuchsia','green','lime','olive','yellow','navy','blue','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
+var cssColors = ['white','black','silver','gray','maroon','red','purple','fuchsia','green','lime','olive','yellow','navy','blue','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
 var mapMarkerColors = [];
 cssColors.forEach(function(color) {
     mapMarkerColors.push(
@@ -14,25 +14,53 @@ cssColors.forEach(function(color) {
     );
 });
 
+// assign clusters an index for determining map markers and colors
 var clusters = {};
 
-
-function addMarker(row) {
-   
-    // options: 'municipality', 'municipalityKMeans'
-    var clusterBy = 'municipalityKMeans';
+function addMarker(row, clusterBy) {
    
     var latitude = row.latitude;
     var longitude = row.longitude;
     var description = row.station + ', ' + row['docksCount'] + ' bikes';
 
-    if (clusters[row[clusterBy]] === undefined) {
-        clusters[row[clusterBy]] = mapMarkerColors[Object.keys(clusters).length];
+    var kMeansLabel = 'default';
+
+    if (hubway.clusters[clusterBy] !== undefined && 
+        hubway.clusters[clusterBy].classification[row.station_id] !== undefined) {
+        kMeansLabel = hubway.clusters[clusterBy].classification[row.station_id];
+    }
+
+    if (clusters[kMeansLabel] === undefined) {
+        clusters[kMeansLabel] = Object.keys(clusters).length;
     }
     
-    var myIcon = clusters[row[clusterBy]];
+    var myIcon = mapMarkerColors[clusters[kMeansLabel]];
     
     var marker = L.marker([latitude, longitude], {icon: myIcon}).addTo(map);
+    
+    if (clusterBy === 'byDirectionAndDistance') {
+
+        if (hubway.clusters.byDirectionAndDistance.clusteringData[row.station_id] === undefined) {
+            return;
+        }
+        
+        var rotation = hubway.clusters.byDirectionAndDistance.clusteringData[row.station_id][2];
+        // var distance = hubway.clusters.byDirectionAndDistance.clusteringData[row.station_id][3];
+        
+        // assume unit distance of 1 for now
+        var distance = 0.0025;
+        var endLat = latitude + Math.sin(rotation) * distance;
+        var endLong = longitude + Math.cos(rotation) * distance;
+
+        var polyline = [
+            [latitude, longitude],
+            [endLat, endLong],
+        ];
+    
+        var colorIndex = clusters[kMeansLabel];
+        L.polyline(polyline, {color: cssColors[colorIndex]}).addTo(map);
+    }
+
     marker.bindPopup(description);
     marker.on('mouseover', function (e) {
             this.openPopup();
@@ -60,6 +88,7 @@ function resizeMarkers() {
     var currentZoom = map.getZoom();
     var threshold = 13;
 
+    /*
     if (currentZoom >= threshold) { 
         $(".marker").css('width', '10px');
         $(".marker").css('height', '10px');
@@ -70,6 +99,7 @@ function resizeMarkers() {
         $(".marker").css('height', '8px');
         $(".marker").css('border-radius', '4px');        
     }
+    */
 }
 
 function resetMapView() {
@@ -133,8 +163,8 @@ jQuery(function($) {
 		hubway = data;
 
         // add station markers
-        hubway.data.forEach(function(row) {
-            addMarker(row);
+        hubway.stations.forEach(function(row) {
+            addMarker(row, "byDirectionAndDistance");
         });
         
 		// remove loading
