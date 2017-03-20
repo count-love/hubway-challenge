@@ -27,7 +27,8 @@ header + div, header + section {
 
 #map {
     margin-top: 6em;
-    height: 800px;
+    height: 550px;
+    margin-bottom: 2em;
 }
 
 .loading-overlay {

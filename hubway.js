@@ -37,17 +37,16 @@ function addMarker(row, clusterBy) {
     var myIcon = mapMarkerColors[clusters[kMeansLabel]];
     
     var marker = L.marker([latitude, longitude], {icon: myIcon}).addTo(map);
+    activeMarkers.push(marker);
     
-    if (clusterBy === 'byDirectionAndDistance') {
+    if (clusterBy.includes('byDirectionAndDistance')) {
 
-        if (hubway.clusters.byDirectionAndDistance.clusteringData[row.station_id] === undefined) {
+        if (hubway.clusters[clusterBy].clusteringData[row.station_id] === undefined) {
             return;
         }
         
-        var rotation = hubway.clusters.byDirectionAndDistance.clusteringData[row.station_id][2];
-        // var distance = hubway.clusters.byDirectionAndDistance.clusteringData[row.station_id][3];
+        var rotation = hubway.clusters[clusterBy].clusteringData[row.station_id].meanVector;
         
-        // assume unit distance of 1 for now
         var distance = 0.0025;
         var endLat = latitude + Math.sin(rotation) * distance;
         var endLong = longitude + Math.cos(rotation) * distance;
@@ -58,7 +57,8 @@ function addMarker(row, clusterBy) {
         ];
     
         var colorIndex = clusters[kMeansLabel];
-        L.polyline(polyline, {color: cssColors[colorIndex]}).addTo(map);
+        var line = L.polyline(polyline, {color: cssColors[colorIndex]}).addTo(map);
+        activeMarkers.push(line);
     }
 
     marker.bindPopup(description);
@@ -88,7 +88,6 @@ function resizeMarkers() {
     var currentZoom = map.getZoom();
     var threshold = 13;
 
-    /*
     if (currentZoom >= threshold) { 
         $(".marker").css('width', '10px');
         $(".marker").css('height', '10px');
@@ -99,7 +98,6 @@ function resizeMarkers() {
         $(".marker").css('height', '8px');
         $(".marker").css('border-radius', '4px');        
     }
-    */
 }
 
 function resetMapView() {
@@ -164,7 +162,7 @@ jQuery(function($) {
 
         // add station markers
         hubway.stations.forEach(function(row) {
-            addMarker(row, "byDirectionAndDistance");
+            addMarker(row, "byDirectionAndDistanceMorning");
         });
         
 		// remove loading
@@ -174,5 +172,20 @@ jQuery(function($) {
 
 	}).fail(function() {
 		// TODO: write me
+	});
+	
+	// button events
+	$("#js_show_morning").on("click", function() {
+	    removeMarkers();
+	    hubway.stations.forEach(function(row) {
+            addMarker(row, "byDirectionAndDistanceMorning");
+        });
+	});
+	
+	$("#js_show_evening").on("click", function() {
+	    removeMarkers();
+		hubway.stations.forEach(function(row) {
+            addMarker(row, "byDirectionAndDistanceEvening");
+        });    
 	});
 });
