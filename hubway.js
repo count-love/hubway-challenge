@@ -70,6 +70,8 @@ function addMarker(row, clusterBy) {
 }
 
 function removeMarkers() {
+    clusters = {};
+
     activeMarkers.forEach(function(marker) {
         map.removeLayer(marker);
     });
