@@ -8,7 +8,10 @@
 <link rel="stylesheet" href="external/bootstrap/3.3.7/bootstrap.css" type="text/css">
 <link rel="stylesheet" href="site.css" type="text/css">
 <link rel="stylesheet" href="external/leaflet/1.0.3/leaflet.css" type="text/css">
+<link rel="stylesheet" href="external/jquery-ui/1.12.1/jquery-ui.css" type="text/css">
 <script src="external/jquery/2.1.1/jquery.js"></script>
+<script src="external/jquery-ui/1.12.1/jquery-ui.js"></script>
+<script src="external/jquery.ui.touch-punch/4bc0091/jquery.ui.touch-punch.js"></script>
 <script src="external/bootstrap/3.3.7/bootstrap.js"></script>
 <script src="external/leaflet/1.0.3/leaflet.js"></script>
 <script src="hubway.js"></script>
@@ -21,9 +24,13 @@
 <main>
 	<div id="map"></div>
 	
-	<div class="text-center header">
+	<div class="text-center header filter">
 	    <button class="btn" id="js_show_morning">Show Morning Commute</button>
 	    <button class="btn" id="js_show_evening">Show Evening Commute</button>
    	    <button class="btn" id="js_show_avg_trip_times">Show Average Trip Times</button>
 	</div>
+	
+	<div class="col-xs-offset-2 col-xs-8 filter">
+	    <div id="js_dateSlider" class="filter-slider"></div>
+    </div>
 </main>

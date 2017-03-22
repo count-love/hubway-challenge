@@ -72,25 +72,6 @@ function replaceMarkers(data) {
 	});
 }
 
-function resizeMarkers() {
-
-    var currentZoom = map.getZoom();
-    var threshold = 13;
-
-    /*
-    if (currentZoom >= threshold) { 
-        $(".marker").css('width', '10px');
-        $(".marker").css('height', '10px');
-        $(".marker").css('border-radius', '5px');
-
-    } else {
-        $(".marker").css('width', '8px');
-        $(".marker").css('height', '8px');
-        $(".marker").css('border-radius', '4px');        
-    }
-    */
-}
-
 // specific illustrations
 function showCommute(time) {
 
@@ -112,22 +93,24 @@ function showCommute(time) {
     });    
 }
 
-function showStationStatistic(name, units) {
+function showStationStatistic(name, month, units) {
 
     var maxSize = 200;
     var maxValue;
 
     Object.keys(hubway.statistics[name]).forEach(function(station) {
-        if (maxValue === undefined || maxValue < hubway.statistics[name][station].markerSize) {
-            maxValue = hubway.statistics[name][station].markerSize;
-        }
+        Object.keys(hubway.statistics[name][station]).forEach(function(time) {
+            if (maxValue === undefined || maxValue < hubway.statistics[name][station][time].markerSize) {
+                maxValue = hubway.statistics[name][station][time].markerSize;
+            }
+        });
     });
 
     hubway.stations.forEach(function(row) {
-        if (hubway.statistics[name][row.station_id]) {
+        if (hubway.statistics[name][row.station_id] && hubway.statistics[name][row.station_id][month]) {
 
-            var description = row.station + ", " + Math.round(hubway.statistics[name][row.station_id].markerSize) + " " + units;
-            var diameter = maxSize * (hubway.statistics[name][row.station_id].markerSize / maxValue);
+            var description = row.station + ", " + Math.round(hubway.statistics[name][row.station_id][month].markerSize) + " " + units;
+            var diameter = maxSize * (hubway.statistics[name][row.station_id][month].markerSize / maxValue);
             var size = {'width': diameter, 'height': diameter};
 
             addMarker(row.latitude, row.longitude, description, "default", size);    
@@ -173,11 +156,7 @@ jQuery(function($) {
 	map = L.map('map', {
 		scrollWheelZoom: false
 	});
-	    
-    map.on('zoomend', function() {
-        resizeMarkers();
-    });    
-        	    
+	            	    
     resetMapView();
 	
 	// specify OSM tiles
@@ -200,9 +179,9 @@ jQuery(function($) {
         hubway.stations.forEach(function(row) {
             var description = row.station + ', ' + row['docksCount'] + ' bikes';
             var size = {'width': row['docksCount'], 'height': row['docksCount']};
-            var clusterBy = hubway.clustering['byStationLocation'].kMeansLabel[row.station_id]; 
+            // var clusterBy = hubway.clustering['byStationLocation'].kMeansLabel[row.station_id]; 
             
-            addMarker(row.latitude, row.longitude, description, clusterBy, size);    
+            addMarker(row.latitude, row.longitude, description, "default", size);    
         });
         
 		// remove loading
@@ -227,7 +206,25 @@ jQuery(function($) {
 	
 	$("#js_show_avg_trip_times").on("click", function() {
 	    removeMarkers();
-        showStationStatistic('averageTripTimeByStation', 'minutes');	    
+        showStationStatistic('averageTripTimeByStation', 1, 'minutes');	    
 	});
+	
+    // lay out date slider  
+    $("#js_dateSlider").slider({
+        min: 1,
+        max: 12,
+        step: 1,
+        range: false,
+        values: 1,
+        slide: function(event, ui) {
+            removeMarkers();
+            showStationStatistic('averageTripTimeByStation', ui.value, 'minutes');
+        },
+        change: function(event, ui) {
+            removeMarkers();
+            showStationStatistic('averageTripTimeByStation', ui.value, 'minutes');
+        }        
+    });
+	
 	
 });
