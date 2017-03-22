@@ -93,15 +93,19 @@ function showCommute(time) {
     });    
 }
 
-function showStationStatistic(name, month, units) {
+function showStationStatistic(name, month, units, outlierBelow, outlierAbove) {
 
-    var maxSize = 200;
+    var maxSize = 100;
     var maxValue;
 
     Object.keys(hubway.statistics[name]).forEach(function(station) {
         Object.keys(hubway.statistics[name][station]).forEach(function(time) {
             if (maxValue === undefined || maxValue < hubway.statistics[name][station][time].markerSize) {
-                maxValue = hubway.statistics[name][station][time].markerSize;
+            
+                var potentialValue = hubway.statistics[name][station][time].markerSize;
+                if (potentialValue > outlierBelow && potentialValue < outlierAbove) {
+                    maxValue = potentialValue;
+                }
             }
         });
     });
@@ -110,10 +114,14 @@ function showStationStatistic(name, month, units) {
         if (hubway.statistics[name][row.station_id] && hubway.statistics[name][row.station_id][month]) {
 
             var description = row.station + ", " + Math.round(hubway.statistics[name][row.station_id][month].markerSize) + " " + units;
-            var diameter = maxSize * (hubway.statistics[name][row.station_id][month].markerSize / maxValue);
-            var size = {'width': diameter, 'height': diameter};
 
-            addMarker(row.latitude, row.longitude, description, "default", size);    
+            var diameter = hubway.statistics[name][row.station_id][month].markerSize;
+            if (diameter > outlierBelow && diameter < outlierAbove) {
+                diameter = diameter * (maxSize / maxValue);
+                var size = {'width': diameter, 'height': diameter};
+
+                addMarker(row.latitude, row.longitude, description, "default", size);
+            }
         }
     }); 
 }
@@ -206,7 +214,7 @@ jQuery(function($) {
 	
 	$("#js_show_avg_trip_times").on("click", function() {
 	    removeMarkers();
-        showStationStatistic('averageTripTimeByStation', 1, 'minutes');	    
+        showStationStatistic('averageTripTimeByStation', 1, 'minutes', 0, 180);	    
 	});
 	
     // lay out date slider  
@@ -218,11 +226,11 @@ jQuery(function($) {
         values: 1,
         slide: function(event, ui) {
             removeMarkers();
-            showStationStatistic('averageTripTimeByStation', ui.value, 'minutes');
+            showStationStatistic('averageTripTimeByStation', ui.value, 'minutes', 0, 180);
         },
         change: function(event, ui) {
             removeMarkers();
-            showStationStatistic('averageTripTimeByStation', ui.value, 'minutes');
+            showStationStatistic('averageTripTimeByStation', ui.value, 'minutes', 0, 180);
         }        
     });
 	
