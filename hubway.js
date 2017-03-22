@@ -3,70 +3,57 @@ var activeMarkers = [];
 var map;
 var hubway = {data: []};
 
-var cssColors = ['white','black','silver','gray','maroon','red','purple','fuchsia','green','lime','olive','yellow','navy','blue','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
-var mapMarkerColors = [];
-cssColors.forEach(function(color) {
-    mapMarkerColors.push(
-        L.divIcon({ 
-            className: 'empty',
-            html: '<div class="marker" style="background:' + color + '"></div>'
-        })
-    );
-});
+var cssColors = ['blue','gray','white','black','silver','maroon','red','purple','fuchsia','green','lime','olive','yellow','navy','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
 
-// assign clusters an index for determining map markers and colors
+// assign clusters an index for determining colors
 var clusters = {};
 
-function addMarker(row, clusterBy) {
+function addMarker(latitude, longitude, description, kMeansLabel, size) {
    
-    var latitude = row.latitude;
-    var longitude = row.longitude;
-    var description = row.station + ', ' + row['docksCount'] + ' bikes';
-
-    var kMeansLabel = 'default';
-
-    if (hubway.clusters[clusterBy] !== undefined && 
-        hubway.clusters[clusterBy].classification[row.station_id] !== undefined) {
-        kMeansLabel = hubway.clusters[clusterBy].classification[row.station_id];
-    }
-
     if (clusters[kMeansLabel] === undefined) {
         clusters[kMeansLabel] = Object.keys(clusters).length;
     }
     
-    var myIcon = mapMarkerColors[clusters[kMeansLabel]];
-    
+    var color = cssColors[clusters[kMeansLabel]];
+    var id = "marker" + activeMarkers.length;
+    var myIcon = L.divIcon({ 
+        className: 'empty',
+        html: '<div class="marker" id="' + id + '" style="background:' + color + '"></div>'
+    });
+
     var marker = L.marker([latitude, longitude], {icon: myIcon}).addTo(map);
-    activeMarkers.push(marker);
     
-    if (clusterBy.includes('byDirectionAndDistance')) {
-
-        if (hubway.clusters[clusterBy].clusteringData[row.station_id] === undefined) {
-            return;
-        }
+    if (size == "default") {
+        $("#"+id).css('width', 10);
+        $("#"+id).css('height', 10);
         
-        var rotation = hubway.clusters[clusterBy].clusteringData[row.station_id].meanVector;
-        
-        var distance = 0.0025;
-        var endLat = latitude + Math.sin(rotation) * distance;
-        var endLong = longitude + Math.cos(rotation) * distance;
-
-        var polyline = [
-            [latitude, longitude],
-            [endLat, endLong],
-        ];
+    } else {
+        $("#"+id).css('width', size.width);
+        $("#"+id).css('height', size.height);    
+    }
     
-        var colorIndex = clusters[kMeansLabel];
-        var line = L.polyline(polyline, {color: cssColors[colorIndex]}).addTo(map);
-        activeMarkers.push(line);
+    marker.bindPopup(description);
+    marker.on('mouseover', function (e) { this.openPopup(); });
+    marker.on('mouseout', function (e) { this.closePopup(); }); 
+    
+    activeMarkers.push(marker);   
+}
+
+function addVector(startLat, startLong, direction, magnitude, kMeansLabel) {
+
+    if (clusters[kMeansLabel] === undefined) {
+        clusters[kMeansLabel] = Object.keys(clusters).length;
     }
 
-    marker.bindPopup(description);
-    marker.on('mouseover', function (e) {
-            this.openPopup();
-        });
+    var endLat = startLat + Math.sin(direction) * magnitude;
+    var endLong = startLong + Math.cos(direction) * magnitude;
+
+    var polyline = [[startLat, startLong], [endLat, endLong]];
+    var colorIndex = clusters[kMeansLabel];
     
-    activeMarkers.push(marker);    
+    var line = L.polyline(polyline, {color: cssColors[colorIndex]}).addTo(map);
+    
+    activeMarkers.push(line);
 }
 
 function removeMarkers() {
@@ -90,6 +77,7 @@ function resizeMarkers() {
     var currentZoom = map.getZoom();
     var threshold = 13;
 
+    /*
     if (currentZoom >= threshold) { 
         $(".marker").css('width', '10px');
         $(".marker").css('height', '10px');
@@ -100,10 +88,56 @@ function resizeMarkers() {
         $(".marker").css('height', '8px');
         $(".marker").css('border-radius', '4px');        
     }
+    */
+}
+
+// specific illustrations
+function showCommute(time) {
+
+    var distance = 0.0025;
+    
+    hubway.stations.forEach(function(row) {
+
+        if (hubway.clustering[time].kMeansLabel[row.station_id] !== undefined) {
+
+            var description = row.station;
+            var diameter = hubway.clustering[time].rawData[row.station_id].meanDistance * 800;
+            var size = {'width': diameter, 'height': diameter};
+            var cluster = hubway.clustering[time].kMeansLabel[row.station_id]; 
+            var direction = hubway.clustering[time].rawData[row.station_id].meanVector;
+
+            addMarker(row.latitude, row.longitude, description, cluster, size);    
+            addVector(row.latitude, row.longitude, direction, distance, cluster);
+        }
+    });    
+}
+
+function showStationStatistic(name, units) {
+
+    var maxSize = 200;
+    var maxValue;
+
+    Object.keys(hubway.statistics[name]).forEach(function(station) {
+        if (maxValue === undefined || maxValue < hubway.statistics[name][station].markerSize) {
+            maxValue = hubway.statistics[name][station].markerSize;
+        }
+    });
+
+    hubway.stations.forEach(function(row) {
+        if (hubway.statistics[name][row.station_id]) {
+
+            var description = row.station + ", " + Math.round(hubway.statistics[name][row.station_id].markerSize) + " " + units;
+            var diameter = maxSize * (hubway.statistics[name][row.station_id].markerSize / maxValue);
+            var size = {'width': diameter, 'height': diameter};
+
+            addMarker(row.latitude, row.longitude, description, "default", size);    
+        }
+    }); 
 }
 
 function resetMapView() {
-	// contiguous US
+
+    // Somerville, Cambridge, Boston
 	map.fitBounds([
 		[42.33811807427539, -71.13733291625978],
 		[42.376934182549896, -71.00309371948244]
@@ -164,7 +198,11 @@ jQuery(function($) {
 
         // add station markers
         hubway.stations.forEach(function(row) {
-            addMarker(row, "byDirectionAndDistanceMorning");
+            var description = row.station + ', ' + row['docksCount'] + ' bikes';
+            var size = {'width': row['docksCount'], 'height': row['docksCount']};
+            var clusterBy = hubway.clustering['byStationLocation'].kMeansLabel[row.station_id]; 
+            
+            addMarker(row.latitude, row.longitude, description, clusterBy, size);    
         });
         
 		// remove loading
@@ -179,15 +217,17 @@ jQuery(function($) {
 	// button events
 	$("#js_show_morning").on("click", function() {
 	    removeMarkers();
-	    hubway.stations.forEach(function(row) {
-            addMarker(row, "byDirectionAndDistanceMorning");
-        });
+	    showCommute('byDirectionAndDistanceMorning');
 	});
 	
 	$("#js_show_evening").on("click", function() {
-	    removeMarkers();
-		hubway.stations.forEach(function(row) {
-            addMarker(row, "byDirectionAndDistanceEvening");
-        });    
+        removeMarkers();
+        showCommute('byDirectionAndDistanceEvening');
 	});
+	
+	$("#js_show_avg_trip_times").on("click", function() {
+	    removeMarkers();
+        showStationStatistic('averageTripTimeByStation', 'minutes');	    
+	});
+	
 });
