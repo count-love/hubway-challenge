@@ -1,31 +1,39 @@
 // global variables
-var activeMarkers = [];
 var map;
 var hubway = {data: []};
+var activeMarkers = [];
+
 var activeStatistic;
 var activeStatisticUnit;
 var outlierLowerBound;
 var outlierUpperBound;
-	    
+var useRawMarkerSize;	    
+	   
+var markerOptions = {
+    'averageTripDistanceByStation': {'stroke': false, 'fillOpacity': 0.1},
+    'default': {'stroke': false, 'fillOpacity': 0.5}
+};
+	   
+var defaultMarkerRadius = 100;
+var defaultStatisticRadius = 800;
 var cssColors = ['blue','gray','white','black','silver','maroon','red','purple','fuchsia','green','lime','olive','yellow','navy','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
 
 // assign clusters an index for determining colors
 var clusters = {};
 
-function addMarker(latitude, longitude, description, kMeansLabel, size) {
+function addMarker(latitude, longitude, description, kMeansLabel, radius, options) {
    
     if (clusters[kMeansLabel] === undefined) {
         clusters[kMeansLabel] = Object.keys(clusters).length;
     }
     
     var color = cssColors[clusters[kMeansLabel]];
-
-    var radius = 100;
-    if (size !== "default") {        
-        radius = size.width * 10;
-    }    
     
-    var marker = L.circle([latitude, longitude], radius, {'stroke': false, 'fillColor': color, 'fillOpacity': 0.5}).addTo(map)
+    var marker = L.circle([latitude, longitude], 
+                          radius, 
+                          {'stroke': options.stroke, 
+                           'fillColor': color, 
+                           'fillOpacity': options.fillOpacity}).addTo(map)
     
     marker.bindPopup(description);
     marker.on('mouseover', function (e) { this.openPopup(); });
@@ -59,14 +67,6 @@ function removeMarkers() {
     });
 }
 
-function replaceMarkers(data) {
-    removeMarkers();
-    
-	data.forEach(function(row) {
-       addMarker(row);
-	});
-}
-
 // specific illustrations
 function showStations() {
 
@@ -75,7 +75,7 @@ function showStations() {
         var description = row.station + ', ' + row['docksCount'] + ' bikes';
         var size = {'width': row['docksCount'], 'height': row['docksCount']};
         
-        addMarker(row.latitude, row.longitude, description, "default", "default");    
+        addMarker(row.latitude, row.longitude, description, "default", defaultMarkerRadius, markerOptions.default);
     });
 }
 
@@ -89,19 +89,17 @@ function showCommute(time) {
 
             var description = row.station;
             var diameter = hubway.clustering[time].rawData[row.station_id].meanDistance * 800;
-            var size = {'width': diameter, 'height': diameter};
             var cluster = hubway.clustering[time].kMeansLabel[row.station_id]; 
             var direction = hubway.clustering[time].rawData[row.station_id].meanVector;
 
-            addMarker(row.latitude, row.longitude, description, cluster, size);    
+            addMarker(row.latitude, row.longitude, description, cluster, defaultMarkerRadius, markerOptions.default);
             addVector(row.latitude, row.longitude, direction, distance, cluster);
         }
     });    
 }
 
-function showStationStatistic(name, month, units, outlierBelow, outlierAbove) {
+function showStationStatistic(name, month, units, useRawMarkerSize, outlierBelow, outlierAbove) {
 
-    var maxSize = 100;
     var maxValue;
 
     Object.keys(hubway.statistics[name]).forEach(function(station) {
@@ -115,18 +113,26 @@ function showStationStatistic(name, month, units, outlierBelow, outlierAbove) {
             }
         });
     });
-    
+        
     hubway.stations.forEach(function(row) {
         if (hubway.statistics[name][row.station_id] && hubway.statistics[name][row.station_id][month]) {
 
             var description = row.station + ", " + Math.round(hubway.statistics[name][row.station_id][month].markerSize) + " " + units;
 
-            var diameter = hubway.statistics[name][row.station_id][month].markerSize;
-            if (diameter > outlierBelow && diameter < outlierAbove) {
-                diameter = diameter * (maxSize / maxValue);
-                var size = {'width': diameter, 'height': diameter};
-
-                addMarker(row.latitude, row.longitude, description, "default", size);
+            var markerSize = hubway.statistics[name][row.station_id][month].markerSize;
+            if (markerSize > outlierBelow && markerSize < outlierAbove) {
+    
+                if (!useRawMarkerSize) {
+                    markerSize = markerSize * (defaultStatisticRadius / maxValue);
+                } else {
+                    markerSize = markerSize / 2;
+                }
+                    
+                if (markerOptions[name]) {
+                    addMarker(row.latitude, row.longitude, description, "default", markerSize, markerOptions[name]);
+                } else { 
+                    addMarker(row.latitude, row.longitude, description, "default", markerSize, markerOptions.default);
+                }
             }
         }
     }); 
@@ -223,7 +229,12 @@ jQuery(function($) {
 	    activeStatisticUnit = 'minutes';
 	    outlierLowerBound = 0;
 	    outlierUpperBound = 180;
-        showStationStatistic(activeStatistic, $("#js_dateSlider").slider("option", "value"), activeStatisticUnit, outlierLowerBound, outlierUpperBound);
+	    useRawMarkerSize = false;
+        showStationStatistic(activeStatistic, 
+                             $("#js_dateSlider").slider("option", "value"), 
+                             activeStatisticUnit,
+                             useRawMarkerSize, 
+                             outlierLowerBound, outlierUpperBound);
 	});
 	
 	$("#js_show_avg_number_trips").on("click", function() {
@@ -231,8 +242,13 @@ jQuery(function($) {
 	    activeStatistic = 'averageTripsByStation';
   	    activeStatisticUnit = 'trips';
   	    outlierLowerBound = 0;
-	    outlierUpperBound = 2000;
-        showStationStatistic(activeStatistic, $("#js_dateSlider").slider("option", "value"), activeStatisticUnit, outlierLowerBound, outlierUpperBound);	    
+	    outlierUpperBound = 5000;
+	    useRawMarkerSize = false;
+        showStationStatistic(activeStatistic, 
+                             $("#js_dateSlider").slider("option", "value"), 
+                             activeStatisticUnit,
+                             useRawMarkerSize, 
+                             outlierLowerBound, outlierUpperBound);
 	});	
 
 	$("#js_show_avg_trip_distance").on("click", function() {
@@ -240,8 +256,13 @@ jQuery(function($) {
 	    activeStatistic = 'averageTripDistanceByStation';
 	    activeStatisticUnit = 'meters';
 	    outlierLowerBound = 0;
-	    outlierUpperBound = 180;
-        showStationStatistic(activeStatistic, $("#js_dateSlider").slider("option", "value"), activeStatisticUnit, outlierLowerBound, outlierUpperBound);
+	    outlierUpperBound = 10000;
+	    useRawMarkerSize = true;
+        showStationStatistic(activeStatistic, 
+                             $("#js_dateSlider").slider("option", "value"), 
+                             activeStatisticUnit,
+                             useRawMarkerSize, 
+                             outlierLowerBound, outlierUpperBound);
 	});
 	
     // lay out date slider  
@@ -253,11 +274,11 @@ jQuery(function($) {
         values: 0,
         slide: function(event, ui) {
             removeMarkers();
-            showStationStatistic(activeStatistic, ui.value, activeStatisticUnit, outlierLowerBound, outlierUpperBound);	    
+            showStationStatistic(activeStatistic, ui.value, activeStatisticUnit, useRawMarkerSize, outlierLowerBound, outlierUpperBound);	    
         },
         change: function(event, ui) {
             removeMarkers();
-            showStationStatistic(activeStatistic, ui.value, activeStatisticUnit, outlierLowerBound, outlierUpperBound);	    
+            showStationStatistic(activeStatistic, ui.value, activeStatisticUnit, useRawMarkerSize, outlierLowerBound, outlierUpperBound);	    
         }        
     });
 
