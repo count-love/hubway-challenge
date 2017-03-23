@@ -2,7 +2,11 @@
 var activeMarkers = [];
 var map;
 var hubway = {data: []};
-
+var activeStatistic;
+var activeStatisticUnit;
+var outlierLowerBound;
+var outlierUpperBound;
+	    
 var cssColors = ['blue','gray','white','black','silver','maroon','red','purple','fuchsia','green','lime','olive','yellow','navy','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
 
 // assign clusters an index for determining colors
@@ -15,22 +19,13 @@ function addMarker(latitude, longitude, description, kMeansLabel, size) {
     }
     
     var color = cssColors[clusters[kMeansLabel]];
-    var id = "marker" + activeMarkers.length;
-    var myIcon = L.divIcon({ 
-        className: 'empty',
-        html: '<div class="marker" id="' + id + '" style="background:' + color + '"></div>'
-    });
 
-    var marker = L.marker([latitude, longitude], {icon: myIcon}).addTo(map);
+    var radius = 100;
+    if (size !== "default") {        
+        radius = size.width * 10;
+    }    
     
-    if (size == "default") {
-        $("#"+id).css('width', 10);
-        $("#"+id).css('height', 10);
-        
-    } else {
-        $("#"+id).css('width', size.width);
-        $("#"+id).css('height', size.height);    
-    }
+    var marker = L.circle([latitude, longitude], radius, {'stroke': false, 'fillColor': color, 'fillOpacity': 0.5}).addTo(map)
     
     marker.bindPopup(description);
     marker.on('mouseover', function (e) { this.openPopup(); });
@@ -73,6 +68,17 @@ function replaceMarkers(data) {
 }
 
 // specific illustrations
+function showStations() {
+
+    // add station markers
+    hubway.stations.forEach(function(row) {
+        var description = row.station + ', ' + row['docksCount'] + ' bikes';
+        var size = {'width': row['docksCount'], 'height': row['docksCount']};
+        
+        addMarker(row.latitude, row.longitude, description, "default", "default");    
+    });
+}
+
 function showCommute(time) {
 
     var distance = 0.0025;
@@ -109,7 +115,7 @@ function showStationStatistic(name, month, units, outlierBelow, outlierAbove) {
             }
         });
     });
-
+    
     hubway.stations.forEach(function(row) {
         if (hubway.statistics[name][row.station_id] && hubway.statistics[name][row.station_id][month]) {
 
@@ -183,15 +189,9 @@ jQuery(function($) {
 		// store to global variable
 		hubway = data;
 
-        // add station markers
-        hubway.stations.forEach(function(row) {
-            var description = row.station + ', ' + row['docksCount'] + ' bikes';
-            var size = {'width': row['docksCount'], 'height': row['docksCount']};
-            // var clusterBy = hubway.clustering['byStationLocation'].kMeansLabel[row.station_id]; 
-            
-            addMarker(row.latitude, row.longitude, description, "default", size);    
-        });
-        
+        // default show
+        showStations();
+                
 		// remove loading
 		setTimeout(function() { 
 		    loading.remove(); 
@@ -202,6 +202,11 @@ jQuery(function($) {
 	});
 	
 	// button events
+	$("#js_show_stations").on("click", function() {
+	    removeMarkers();
+	    showStations();
+	});
+	
 	$("#js_show_morning").on("click", function() {
 	    removeMarkers();
 	    showCommute('byDirectionAndDistanceMorning');
@@ -212,27 +217,48 @@ jQuery(function($) {
         showCommute('byDirectionAndDistanceEvening');
 	});
 	
-	$("#js_show_avg_trip_times").on("click", function() {
+	$("#js_show_avg_trip_duration").on("click", function() {
 	    removeMarkers();
-        showStationStatistic('averageTripTimeByStation', 1, 'minutes', 0, 180);	    
+	    activeStatistic = 'averageTripDurationByStation';
+	    activeStatisticUnit = 'minutes';
+	    outlierLowerBound = 0;
+	    outlierUpperBound = 180;
+        showStationStatistic(activeStatistic, $("#js_dateSlider").slider("option", "value"), activeStatisticUnit, outlierLowerBound, outlierUpperBound);
+	});
+	
+	$("#js_show_avg_number_trips").on("click", function() {
+	    removeMarkers();
+	    activeStatistic = 'averageTripsByStation';
+  	    activeStatisticUnit = 'trips';
+  	    outlierLowerBound = 0;
+	    outlierUpperBound = 2000;
+        showStationStatistic(activeStatistic, $("#js_dateSlider").slider("option", "value"), activeStatisticUnit, outlierLowerBound, outlierUpperBound);	    
+	});	
+
+	$("#js_show_avg_trip_distance").on("click", function() {
+	    removeMarkers();
+	    activeStatistic = 'averageTripDistanceByStation';
+	    activeStatisticUnit = 'meters';
+	    outlierLowerBound = 0;
+	    outlierUpperBound = 180;
+        showStationStatistic(activeStatistic, $("#js_dateSlider").slider("option", "value"), activeStatisticUnit, outlierLowerBound, outlierUpperBound);
 	});
 	
     // lay out date slider  
     $("#js_dateSlider").slider({
-        min: 1,
-        max: 12,
+        min: 0,
+        max: 23,
         step: 1,
         range: false,
-        values: 1,
+        values: 0,
         slide: function(event, ui) {
             removeMarkers();
-            showStationStatistic('averageTripTimeByStation', ui.value, 'minutes', 0, 180);
+            showStationStatistic(activeStatistic, ui.value, activeStatisticUnit, outlierLowerBound, outlierUpperBound);	    
         },
         change: function(event, ui) {
             removeMarkers();
-            showStationStatistic('averageTripTimeByStation', ui.value, 'minutes', 0, 180);
+            showStationStatistic(activeStatistic, ui.value, activeStatisticUnit, outlierLowerBound, outlierUpperBound);	    
         }        
     });
-	
-	
+
 });

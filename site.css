@@ -1,11 +1,3 @@
-.marker {
-    border-radius: 50%;
-}
-
-.empty { }
-
-/* COMMON */
-
 body > .container {
     width: 92%;
     margin: 0 auto;
