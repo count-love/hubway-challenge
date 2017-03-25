@@ -32,6 +32,17 @@ var availableTimes = {
     'hour': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 }
 
+var timeSets = {
+    'morning': {'hour': [5, 6, 7, 8, 9]},
+    'evening': {'hour': [16, 17, 18, 19, 20]},
+    'weekday': {'day': [2, 3, 4, 5, 6]},
+    'weekend': {'day': [1, 7]},
+    'spring': {'month': [3, 4, 5]},
+    'summer': {'month': [6, 7, 8]},
+    'fall': {'month': [9, 10, 11]},
+    'winter': {'month': [12, 1, 2]}
+}
+
 // assign clusters an index for determining colors
 var clusters = {};
 
@@ -415,7 +426,7 @@ jQuery(function($) {
 		}, 0);
 
 	}).fail(function() {
-		// TODO: write me
+        console.log("Unable to load data.json");
 	});
 	
 	// button events
@@ -474,4 +485,41 @@ jQuery(function($) {
     setupTimeFilter("month");
     setupTimeFilter("day");
     setupTimeFilter("hour");
+    
+    // attach button events to time groups
+    Object.keys(timeSets).forEach(function(set) {
+        var button = "#js_" + set;
+        $(button).prop('enabled', false);
+        
+        $(button).on("click", function(e) {
+            
+            // toggle the state
+            var enabled = !$(button).prop('enabled');
+            
+            $(button).prop('enabled', enabled);
+            if (enabled) {
+                $(button).addClass('active');
+                
+                Object.keys(timeSets[set]).forEach(function(group) {
+                    timeSets[set][group].forEach(function(checkbox) {
+                        var checkbox = "#js_" + group + "_" + checkbox;
+                        $(checkbox).prop('checked', true);
+                        $(checkbox).trigger('change');
+                    });
+                });
+                
+            } else {
+                $(button).removeClass('active');
+
+                Object.keys(timeSets[set]).forEach(function(group) {
+                    timeSets[set][group].forEach(function(checkbox) {
+                        var checkbox = "#js_" + group + "_" + checkbox;
+                        $(checkbox).prop('checked', false);
+                        $(checkbox).trigger('change');
+                    });
+                });                
+            } 
+        });
+    });
+
 });
