@@ -14,7 +14,8 @@ var useRawMarkerSize;
 	   
 var markerOptions = {
     'averageTripDistanceByStation': {'stroke': false, 'fillOpacity': 0.2, 'pane': 'data'},
-    'selected': {'stroke': false, 'fillOpacity': 1, 'fillColor': 'red'},
+    'stationUnselected': {'stroke': false, 'fillOpacity': 0.7, 'fillColor': 'blue'},
+    'stationSelected': {'stroke': false, 'fillOpacity': 0.7, 'fillColor': 'red'},
     'default': {'stroke': false, 'fillOpacity': 0.5}
 };
 	   
@@ -24,11 +25,12 @@ var cssColors = ['blue','navy','red','white','gray','black','silver','maroon','p
 var selectedColor = 'red';
 var unselectedColor = 'blue';
 
-var years = [2011, 2012, 2013, 2014, 2015, 2016];
-var months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-var days = [1, 2, 3, 4, 5, 6, 7];
-var hours = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
-
+var availableTimes = {
+    'year': [2011, 2012, 2013, 2014, 2015, 2016],
+    'month': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    'day': [1, 2, 3, 4, 5, 6, 7],
+    'hour': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+}
 
 // assign clusters an index for determining colors
 var clusters = {};
@@ -105,23 +107,24 @@ function showStations() {
     hubway.stations.forEach(function(row) {
         var description = row.station + ', ' + row['docksCount'] + ' bikes';        
         marker = addMarker(row.latitude, row.longitude, description, "default", defaultMarkerRadius, markerOptions.default);
+        marker.setStyle(markerOptions.stationUnselected);
 
         marker.bindPopup(description);
         marker.on('mouseover', function (e) { this.openPopup(); });
         marker.on('mouseout', function (e) { this.closePopup(); });
         
-        if (selectedStations[row.station_id] || (Math.random() < 0.05 && randomlySeed)) {
+        if (selectedStations[row.station_id] || (Math.random() < 0.02 && randomlySeed)) {
             selectedStations[row.station_id] = {'row': row, 'marker': marker};
-            marker.setStyle(markerOptions.selected);        
+            marker.setStyle(markerOptions.stationSelected);        
         }
         
         marker.on('click', function (e) { 
             if (!selectedStations[row.station_id]) {
                 selectedStations[row.station_id] = {'row': row, 'marker': this};
-                this.setStyle(markerOptions.selected);
+                this.setStyle(markerOptions.stationSelected);
             } else {
                 delete selectedStations[row.station_id];
-                this.setStyle(markerOptions.default);
+                this.setStyle(markerOptions.stationUnselected);
             }
         });
         
@@ -190,7 +193,6 @@ function showAverageDistanceByStation() {
 
         description +=  row.station + ", " + Math.round(min, 0) + "-" + Math.round(mean, 0) + "-" + Math.round(max, 0) + " " + activeStatisticUnit + "<br>";
     });
-    
 
     description += "</p>";    
     $("#js_description").html(description);
@@ -344,27 +346,27 @@ function createLoadingOverlay(obj) {
 	return ret;
 }
 
-function setupTimeFilter(options, label, div) {
+function setupTimeFilter(group) {
 
-    var filters = label + ": ";
+    var filters = group + ": ";
 
-    options.forEach(function(time) {
-        var id = "js_" + label + "_" + time;
+    availableTimes[group].forEach(function(time) {
+        var id = "js_" + group + "_" + time;
         filters += "<label for='" + id + "'>" + time + "</label><input type='checkbox' id='" + id + "'>";
     });
     
     // add filters to the DOM
-    $(div).html(filters);
+    $("#js_"+group).html(filters);
     
     // attach handlers
-    options.forEach(function(time) {
-        var checkbox = "#js_" + label + "_" + time;
+    availableTimes[group].forEach(function(time) {
+        var checkbox = "#js_" + group + "_" + time;
         
         $(checkbox).on("change", function() {
             if ($(this).prop('checked')) {
-                selectedTime[label][time] = true;
+                selectedTime[group][time] = true;
             } else {
-                delete selectedTime[label][time];
+                delete selectedTime[group][time];
             }  
         });
 
@@ -468,8 +470,8 @@ jQuery(function($) {
 	});
     
     // lay out time filters
-    setupTimeFilter(years, "year", "#js_years");
-    setupTimeFilter(months, "month", "#js_months");
-    setupTimeFilter(days, "day", "#js_days");
-    setupTimeFilter(hours, "hour", "#js_hours");
+    setupTimeFilter("year");
+    setupTimeFilter("month");
+    setupTimeFilter("day");
+    setupTimeFilter("hour");
 });
