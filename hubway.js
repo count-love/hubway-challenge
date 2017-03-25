@@ -493,10 +493,11 @@ jQuery(function($) {
         
         $(button).on("click", function(e) {
             
-            // toggle the state
+            // toggle the button state
             var enabled = !$(button).prop('enabled');
-            
             $(button).prop('enabled', enabled);
+            
+            // toggle the appropriate time filter checkboxes
             if (enabled) {
                 $(button).addClass('active');
                 
