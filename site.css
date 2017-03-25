@@ -8,7 +8,7 @@ main, section {
 }
 
 header {
-    margin-bottom: 20px;
+    margin-bottom: 4em;
 }
 
 header + div, header + section {
@@ -16,9 +16,7 @@ header + div, header + section {
 }
 
 #map {
-    margin-top: 6em;
-    height: 550px;
-    margin-bottom: 2em;
+    height: 700px;
 }
 
 .loading-overlay {

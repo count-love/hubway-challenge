@@ -22,21 +22,44 @@
 <h1>Hubway Challenge</h1>
 </header>
 <main>
-	<div id="map"></div>
-	
-	<div class="text-center header filter">
-		<button class="btn" id="js_show_stations">Bike Stations</button>
-	    <button class="btn" id="js_show_morning">Morning Commute</button>
-	    <button class="btn" id="js_show_evening">Evening Commute</button>
-	</div>
 
-	<div class="text-center header filter">
-   	    <button class="btn" id="js_show_avg_number_trips">Average Number of Trips</button>
-   	    <button class="btn" id="js_show_avg_trip_duration">Average Trip Duration</button>
-   	    <button class="btn" id="js_show_avg_trip_distance">Average Trip Distance</button>
-	</div>
-	
-	<div class="col-xs-offset-2 col-xs-8 filter">
-	    <div id="js_dateSlider" class="filter-slider"></div>
+    <div class="row">
+
+        <div class="col-xs-8">
+            <div id="map"></div>
+        </div>
+    
+        <div class="col-xs-4">
+            
+            <div class="row filter">
+                <button class="btn" id="js_show_stations">Bike Stations</button>
+            </div>
+            
+            
+            <div class="row filter">            
+                <button class="btn" id="js_show_morning">Morning Commute</button>
+                <button class="btn" id="js_show_evening">Evening Commute</button>
+            </div>
+
+            
+            <div class="row filter">
+                <button class="btn" id="js_show_avg_number_trips">Trips</button>
+                <button class="btn" id="js_show_avg_trip_duration">Duration</button>
+                <button class="btn" id="js_show_avg_trip_distance">Distance</button>
+            </div>
+            
+            <div class="filter row" id="js_years"></div>
+            <div class="filter row" id="js_months"></div>
+            <div class="filter row" id="js_days"></div>
+            <div class="filter row" id="js_hours"></div>
+                        
+            <div class="filter row">
+                <div class="col-xs-12" id="js_description">
+                </div>
+            </div>
+            
+        </div>
+
     </div>
+    
 </main>
