@@ -34,13 +34,12 @@
 		AGGREGATORS: {
 			sum: {
 				ingest: function(v, u) {
-					if (isNaN(u)) return v;
-					return u + (v || 0);
+					return (u || 0) + (v || 0);
 				}
 			},
 			mean: {
 				ingest: function(v, u) {
-					if (isNaN(u)) return v;
+					if (Number.isNaN(u)) return v;
 					if (!v) {
 						return {count: 1, sum: u};
 					}
@@ -54,16 +53,12 @@
 			},
 			min: {
 				ingest: function(v, u) {
-					if (isNaN(u)) return v;
-					if ("undefined" === typeof v || u < v) return u;
-					return v;
+					return Math.min(v || Number.POSITIVE_INFINITY, u || Number.POSITIVE_INFINITY);
 				}
 			},
 			max: {
 				ingest: function(v, u) {
-					if (isNaN(u)) return v;
-					if ("undefined" === typeof v || u > v) return u;
-					return v;
+					return Math.max(v || Number.NEGATIVE_INFINITY, u || Number.NEGATIVE_INFINITY);
 				}
 			}
 		},
@@ -308,6 +303,12 @@
 					}
 				}
 				
+				// no filters
+				if (filters_cb.length === 0) {
+					return null;
+				}
+				
+				// single filter
 				if (filters_cb.length === 1) {
 					return filters_cb[0];
 				}
@@ -392,6 +393,13 @@
 				}
 				
 				throw "Unrecognized column for value: " + value;
+			
+			case "object":
+				if (value.initialize) {
+					value.initialize();
+				}
+				
+				return value.compute;
 			
 			default:
 				throw "Unrecognized type for value: " + typeof value;
