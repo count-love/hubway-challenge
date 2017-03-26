@@ -53,10 +53,18 @@
 				}
 			},
 			min: {
-				ingest: function(v, u) { if ("undefined" === typeof v || u < v) return u; return v; }
+				ingest: function(v, u) {
+					if (isNaN(u)) return v;
+					if ("undefined" === typeof v || u < v) return u;
+					return v;
+				}
 			},
 			max: {
-				ingest: function(v, u) { if ("undefined" === typeof v || u > v) return u; return v; }
+				ingest: function(v, u) {
+					if (isNaN(u)) return v;
+					if ("undefined" === typeof v || u > v) return u;
+					return v;
+				}
 			}
 		},
 		COMPUTED: {
