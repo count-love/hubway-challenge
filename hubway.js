@@ -25,12 +25,15 @@ var cssColors = ['blue','navy','red','white','gray','black','silver','maroon','p
 var selectedColor = 'red';
 var unselectedColor = 'blue';
 
+// assign clusters an index for determining colors
+var clusters = {};
+
 var availableTimes = {
     'year': [2011, 2012, 2013, 2014, 2015, 2016],
     'month': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     'day': [1, 2, 3, 4, 5, 6, 7],
     'hour': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
-}
+};
 
 var timeSets = {
     'morning': {'hour': [5, 6, 7, 8, 9]},
@@ -41,10 +44,34 @@ var timeSets = {
     'summer': {'month': [6, 7, 8]},
     'fall': {'month': [9, 10, 11]},
     'winter': {'month': [12, 1, 2]}
-}
+};
 
-// assign clusters an index for determining colors
-var clusters = {};
+var illustrations = {
+	'averageTripDistanceByStation': debounce(function() { $("#js_show_avg_trip_distance").trigger('click') }, 100),
+	'averageTripDurationByStation': debounce(function() { $("#js_show_avg_trip_duration").trigger('click') }, 100),
+	'averageTripsByStation': debounce(function() { $("#js_show_avg_number_trips").trigger('click') }, 100)
+};
+
+function debounce(func, threshold, execAsap) {
+    var timeout;
+    
+    return function debounced() {
+        var obj = this, args = arguments;
+        
+        function delayed() {
+            if (!execAsap) { func.apply(obj, args); }
+            timeout = null;
+        }
+        
+        if (timeout) {  
+            clearTimeout(timeout);
+        } else if (execAsap) {
+            func.apply(obj, args);
+        }
+        
+        timeout = setTimeout(delayed, threshold || 100);
+    };
+}
 
 function addMarker(latitude, longitude, description, kMeansLabel, radius, options) {
    
@@ -309,7 +336,11 @@ function showStationStatistic(name, units, useRawMarkerSize, outlierBelow, outli
             var marker;
             
             if (!useRawMarkerSize) {
-                markerSize = markerSize * (defaultStatisticRadius / maxValue);
+                if (maxValue != 0) {
+                    markerSize = markerSize * (defaultStatisticRadius / maxValue);
+                } else {
+                    markerSize = 0;
+                }
             }
 
             if (markerOptions[name]) {
@@ -379,13 +410,43 @@ function setupTimeFilter(group) {
             } else {
                 delete selectedTime[group][time];
             }  
+            
+            if (activeStatistic !== undefined) {
+                illustrations[activeStatistic]();
+            }
+
+            // refresh time group button states
+            Object.keys(timeSets).forEach(function(key) {
+                refreshTimeFilter(key);
+            });                
         });
 
-        if (time == '2016' || time == '7' || Math.random() < 0.2) {
+        if (time == '2016' || group == 'month' || group == 'day' || group == 'hour') {
             $(checkbox).prop('checked', true);
             $(checkbox).trigger('change');
         }
+
     });
+}
+
+function refreshTimeFilter(set) {
+    
+    var enabled = 1;
+    
+    Object.keys(timeSets[set]).forEach(function(group) {
+        timeSets[set][group].forEach(function(time) {
+            var id = "#js_" + group + "_" + time;            
+            enabled = enabled && $(id).prop('checked');
+        });
+    });
+        
+    var buttonID = "#js_" + set;
+    
+    if (enabled) {
+        $(buttonID).addClass('active');
+    } else {
+        $(buttonID).removeClass('active');
+    }
 }
 
 jQuery(function($) {
@@ -444,7 +505,7 @@ jQuery(function($) {
         removeMarkers();
         showCommute('byDirectionAndDistanceEvening');
 	});
-	
+
 	$("#js_show_avg_trip_duration").on("click", function() {
 	    removeMarkers();
 	    activeStatistic = 'averageTripDurationByStation';
@@ -457,7 +518,7 @@ jQuery(function($) {
                              useRawMarkerSize, 
                              outlierLowerBound, outlierUpperBound);
 	});
-	
+
 	$("#js_show_avg_number_trips").on("click", function() {
 	    removeMarkers();
 	    activeStatistic = 'averageTripsByStation';
@@ -480,25 +541,23 @@ jQuery(function($) {
         showAverageDistanceByStation();
 	});
     
-    // lay out time filters
-    setupTimeFilter("year");
-    setupTimeFilter("month");
-    setupTimeFilter("day");
-    setupTimeFilter("hour");
+    // lay out time check boxes
+    Object.keys(availableTimes).forEach(function(key) {
+        setupTimeFilter(key);
+    });
     
     // attach button events to time groups
     Object.keys(timeSets).forEach(function(set) {
         var button = "#js_" + set;
-        $(button).prop('enabled', false);
+        $(button).removeClass('enabled');
         
         $(button).on("click", function(e) {
             
             // toggle the button state
-            var enabled = !$(button).prop('enabled');
-            $(button).prop('enabled', enabled);
+            var enabled = $(this).hasClass('active');
             
-            // toggle the appropriate time filter checkboxes
-            if (enabled) {
+            // toggle the appropriate time filter button and checkboxes
+            if (!enabled) {
                 $(button).addClass('active');
                 
                 Object.keys(timeSets[set]).forEach(function(group) {
@@ -519,7 +578,7 @@ jQuery(function($) {
                         $(checkbox).trigger('change');
                     });
                 });                
-            } 
+            }   
         });
     });
 
