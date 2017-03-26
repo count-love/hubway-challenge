@@ -1,45 +1,46 @@
 // global variables
 var map;
 var hubway = {data: []};
-var activeMarkers = [];
-var overlayMarkers = [];
-var selectedStations = {};
-var selectedTime = {'year': {}, 'month': {}, 'day': {}, 'hour': {}};
-
-var activeStatistic;
-var activeStatisticUnit;
-var outlierLowerBound;
-var outlierUpperBound;
-var useRawMarkerSize;
+var activeMarkers = {'default': []};
+var selectedTime = {
+    'year': {2016:true}, 
+    'month': {1:true,2:true,3:true,4:true,5:true,6:true,7:true,8:true,9:true,10:true,11:true,12:true},
+    'day': {0:true,1:true,2:true,3:true,4:true,5:true,6:true},
+    'hour': {0:true,1:true,2:true,3:true,4:true,5:true,6:true,7:true,8:true,9:true,10:true,11:true,12:true,13:true,14:true,15:true,16:true,17:true,18:true,19:true,20:true,21:true,22:true,23:true}};
 	   
 var markerOptions = {
-    'averageTripDistanceByStation': {'stroke': false, 'fillOpacity': 0.2, 'pane': 'data'},
+    'distance': {'stroke': false, 'fillOpacity': 0.2, 'pane': 'data'},
+    'vector': { 'fillColor': 'blue', 'fillOpacity': 0.2, 'pane': 'data'},
     'stationUnselected': {'stroke': false, 'fillOpacity': 0.7, 'fillColor': 'blue'},
     'stationSelected': {'stroke': false, 'fillOpacity': 0.7, 'fillColor': 'red'},
+    'data': {'stroke': false, 'fillOpacity': 0.5, 'pane': 'data'},
     'default': {'stroke': false, 'fillOpacity': 0.5}
 };
 	   
 var defaultMarkerRadius = 100;
-var defaultStatisticRadius = 1600;
-var cssColors = ['blue','navy','red','white','gray','black','silver','maroon','purple','fuchsia','lime','olive','yellow','green','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
-var selectedColor = 'red';
-var unselectedColor = 'blue';
+var defaultStatisticRadius = 2000;
+var cssColors = ['blue','white','red','navy','gray','black','silver','maroon','purple','fuchsia','lime','olive','yellow','green','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
 
-// assign clusters an index for determining colors
+var activeStatistic;
+var selectedStations = {};
 var clusters = {};
 
 var availableTimes = {
-    'year': [2011, 2012, 2013, 2014, 2015, 2016],
+    'year': [2016, 2015, 2014, 2013, 2012, 2011],
     'month': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     'day': [1, 2, 3, 4, 5, 6, 7],
     'hour': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 };
 
 var timeSets = {
-    'morning': {'hour': [5, 6, 7, 8, 9]},
-    'evening': {'hour': [16, 17, 18, 19, 20]},
-    'weekday': {'day': [2, 3, 4, 5, 6]},
-    'weekend': {'day': [1, 7]},
+    'early': {'hour': [2, 3, 4, 5]},
+    'morning': {'hour': [6, 7, 8, 9,]},
+    'midday': {'hour': [10, 11, 12, 13]},
+    'afternoon': {'hour': [14, 15, 16]},
+    'evening': {'hour': [17, 18, 19, 20]},
+    'night': {'hour': [21, 22, 23, 0, 1]},
+    'weekday': {'day': [0, 1, 2, 3, 4]},
+    'weekend': {'day': [5, 6]},
     'spring': {'month': [3, 4, 5]},
     'summer': {'month': [6, 7, 8]},
     'fall': {'month': [9, 10, 11]},
@@ -47,9 +48,181 @@ var timeSets = {
 };
 
 var illustrations = {
-	'averageTripDistanceByStation': debounce(function() { $("#js_show_avg_trip_distance").trigger('click') }, 100),
-	'averageTripDurationByStation': debounce(function() { $("#js_show_avg_trip_duration").trigger('click') }, 100),
-	'averageTripsByStation': debounce(function() { $("#js_show_avg_number_trips").trigger('click') }, 100)
+
+    'direction': {
+	    unit: 'meters',
+	    maxValue: 1,
+	    useRawMarkerSize: true,
+	    markerOptions: markerOptions.vector,
+  	    draw: debounce(function() {
+      	        showStationStatistic('direction', ['direction']);
+           	    $("#js_description").html("Top 5 end stations from selected start stations");
+  	        }, 100),
+
+  	    queryResults: function() { 
+
+            var results = DataSource.query(
+                { 
+                    startYear: Object.keys(selectedTime['year']),
+                    startMonth: Object.keys(selectedTime['month']),
+                    startWeekday: Object.keys(selectedTime['day']),
+                    startHour: Object.keys(selectedTime['hour']),
+                    stationStart: Object.keys(selectedStations),
+                },
+                function(trip) { return trip & 0xffff; }, 
+                null,
+                null
+            );
+                        
+            var resultsByStation = {};
+            Object.keys(results).forEach(function(row) {
+                var startStationID = DataSource.FIELDS.stationStart(row);
+                var endStationID = DataSource.FIELDS.stationEnd(row);
+                
+                if (!resultsByStation[startStationID]) {
+                    resultsByStation[startStationID] = {};
+                }
+                
+                if (!resultsByStation[startStationID][endStationID]) {
+                    resultsByStation[startStationID][endStationID] = 0;
+                }
+                
+                resultsByStation[startStationID][endStationID] = results[row];
+            });
+                        
+            var topStations = {};
+            
+            Object.keys(resultsByStation).forEach(function(station) {
+                
+                var keys = Object.keys(resultsByStation[station]);
+                
+                var sortedKeys = keys.sort(function(a, b) {
+                    if (resultsByStation[station][a] < resultsByStation[station][b]) {
+                        return 1;
+                    } else if (resultsByStation[station][a] > resultsByStation[station][b]) {
+                        return -1;
+                    }
+                    
+                    return 0;
+                });
+                
+                topStations[station] = sortedKeys;
+            });
+            
+            return {'direction': topStations};
+        }       
+    },
+
+	'distance': {
+	    unit: 'meters',
+	    maxValue: 3000,
+	    useRawMarkerSize: true,
+	    markerOptions: markerOptions.distance,
+  	    draw: debounce(function() {
+      	        showStationStatistic('distance', ['min', 'mean', 'max']);
+  	        }, 100),
+
+  	    queryResults: function() { 
+
+            var min = DataSource.query(
+                { 
+                    startYear: Object.keys(selectedTime['year']),
+                    startMonth: Object.keys(selectedTime['month']),
+                    startWeekday: Object.keys(selectedTime['day']),
+                    startHour: Object.keys(selectedTime['hour']),
+                    stationStart: Object.keys(selectedStations)
+                },
+                "stationStart", "distance", "min"
+            ); 
+              	        
+            var mean = DataSource.query(
+                { 
+                    startYear: Object.keys(selectedTime['year']),
+                    startMonth: Object.keys(selectedTime['month']),
+                    startWeekday: Object.keys(selectedTime['day']),
+                    startHour: Object.keys(selectedTime['hour']),
+                    stationStart: Object.keys(selectedStations)
+                },
+                "stationStart", "distance", "mean"
+            );
+
+            var max = DataSource.query(
+                { 
+                    startYear: Object.keys(selectedTime['year']),
+                    startMonth: Object.keys(selectedTime['month']),
+                    startWeekday: Object.keys(selectedTime['day']),
+                    startHour: Object.keys(selectedTime['hour']),
+                    stationStart: Object.keys(selectedStations)
+                },
+                "stationStart", "distance", "max"
+            );
+            
+            return {'min': min, 'mean': mean, 'max': max};
+        }	
+	},
+	    
+	'meanDuration': {
+	    unit: 'minutes',
+	    maxValue: 60,
+	    useRawMarkerSize: false,
+	    markerOptions: markerOptions.data,
+  	    draw: debounce(function() {
+      	        showStationStatistic('meanDuration', ['meanDuration']);
+  	        }, 100),
+
+  	    queryResults: function() { 
+
+  	        var results = DataSource.query(
+  	            // which results to include, can be null for all or a hash where keys are field 
+  	            // names and values are either a single value or an array of values
+  	            // valid fields: duration, gender, member, startMinute, startYear, startMonth, startWeekday, startHour, stationEnd, stationStart
+                { 
+                    startYear: Object.keys(selectedTime['year']),
+                    startMonth: Object.keys(selectedTime['month']),
+                    startWeekday: Object.keys(selectedTime['day']),
+                    startHour: Object.keys(selectedTime['hour'])
+                },
+                "stationStart", // what to group by (can be any field name), or null for no grouping
+                "duration",     // what to aggregate (can be any field name), or null to count results
+                "mean"          // how to aggregate (can be sum, min, max or mean)
+            ); 
+            
+            return {'meanDuration': results};
+        }
+	},
+	
+	'numberOfTrips': {
+	    unit: 'trips/day',
+	    maxValue: 200,
+	    useRawMarkerSize: false,
+	    markerOptions: markerOptions.data,
+  	    draw: debounce(function() {
+      	        showStationStatistic('numberOfTrips', ['numberOfTrips']);
+  	        }, 100),
+
+  	    queryResults: function() { 
+
+  	        var results = DataSource.query(
+                { 
+                    startYear: Object.keys(selectedTime['year']),
+                    startMonth: Object.keys(selectedTime['month']),
+                    startWeekday: Object.keys(selectedTime['day']),
+                    startHour: Object.keys(selectedTime['hour'])
+                },
+                "stationStart", null, "sum"
+            );
+
+            // just an approximation... (# months)*(4 weeks/month)*(days/week)
+            var totalNumberOfDays = Object.keys(selectedTime['month']).length * 4 *
+               Object.keys(selectedTime['day']).length;
+            
+            Object.keys(results).forEach(function(station) {
+                results[station] /= totalNumberOfDays;
+            });
+            
+            return {'numberOfTrips': results};
+        }
+	},
 };
 
 function debounce(func, threshold, execAsap) {
@@ -100,49 +273,58 @@ function addMarker(latitude, longitude, description, kMeansLabel, radius, option
                            'fillOpacity': options.fillOpacity}).addTo(map);    
     }
     
-    activeMarkers.push(marker);
-    
+    if (options.pane) {
+        if (!activeMarkers[options.pane]) { 
+            activeMarkers[options.pane] = [marker]; 
+        } else { 
+            activeMarkers[options.pane].push(marker); 
+        }
+        
+    } else {
+        activeMarkers['default'].push(marker);
+    }
+
     return marker;
 }
 
-function addVector(startLat, startLong, direction, magnitude, kMeansLabel) {
+function addVector(startLat, startLong, endLat, endLong, kMeansLabel) {
 
     if (clusters[kMeansLabel] === undefined) {
         clusters[kMeansLabel] = Object.keys(clusters).length;
     }
 
-    var endLat = startLat + Math.sin(direction) * magnitude;
-    var endLong = startLong + Math.cos(direction) * magnitude;
-
     var polyline = [[startLat, startLong], [endLat, endLong]];
     var colorIndex = clusters[kMeansLabel];
     
-    var line = L.polyline(polyline, {color: cssColors[colorIndex]}).addTo(map);
+    var line = L.polyline(polyline, markerOptions.vector).addTo(map);
     
-    activeMarkers.push(line);
+    if (!activeMarkers['data']) {
+        activeMarkers['data'] = [];
+    }
+    
+    activeMarkers['data'].push(line);
 }
 
 function removeMarkers() {
 
-    activeMarkers.forEach(function(marker) {
-        map.removeLayer(marker);
-    });
-    
-    overlayMarkers.forEach(function(marker) {
-        map.removeLayer(marker.marker);
+    Object.keys(activeMarkers).forEach(function(key) {
+        activeMarkers[key].forEach(function(marker) {
+            map.removeLayer(marker);
+        });
     });
     
     clusters = {};    
-    activeMarkers = [];
+    activeMarkers = { 'default': [] };
 }
 
-// specific illustrations
+// add station markers
 function showStations() {
 
     var randomlySeed = !Object.keys(selectedStations).length;
 
-    // add station markers
-    hubway.stations.forEach(function(row) {
+    Object.keys(hubway.stations).forEach(function(station_id) {
+        var row = hubway.stations[station_id];
+    
         var description = row.station + ', ' + row['docksCount'] + ' bikes';        
         marker = addMarker(row.latitude, row.longitude, description, "default", defaultMarkerRadius, markerOptions.default);
         marker.setStyle(markerOptions.stationUnselected);
@@ -160,201 +342,95 @@ function showStations() {
             if (!selectedStations[row.station_id]) {
                 selectedStations[row.station_id] = {'row': row, 'marker': this};
                 this.setStyle(markerOptions.stationSelected);
+                
+                if (activeStatistic !== undefined) {
+                    illustrations[activeStatistic].draw();
+                }
+                
             } else {
                 delete selectedStations[row.station_id];
                 this.setStyle(markerOptions.stationUnselected);
+                
+                if (activeStatistic !== undefined) {
+                    illustrations[activeStatistic].draw();
+                }                
             }
         });
         
     });
 }
 
-function showAverageDistanceByStation() {
+function showStationStatistic(forStatistic, properties) {
 
-    map.getPane('data');
+	loading = createLoadingOverlay("#map");
 
-    overlayMarkers.forEach(function(marker) {
-        map.removeLayer(marker.marker);
-    });
-
-    var description = "<p>";
-
-    Object.keys(selectedStations).forEach(function(station_id) {
-        
-        if (!hubway.statistics[activeStatistic][station_id]) { return; }
-        
-        var row = selectedStations[station_id].row;
-
-        var max = 0;
-        var min = 0;
-        var sum = 0;
-        var count = 0;
+    setTimeout(function() {
     
-        Object.keys(selectedTime.year).forEach(function(year) {
-        if (!hubway.statistics[activeStatistic][station_id][year]) { return; }
-
-            Object.keys(selectedTime.month).forEach(function(month) {
-                if (!hubway.statistics[activeStatistic][station_id][year][month]) { return; }
-            
-                Object.keys(selectedTime.day).forEach(function(day) {
-                    if (!hubway.statistics[activeStatistic][station_id][year][month][day]) { return; }
-
-                    Object.keys(selectedTime.hour).forEach(function(hour) {
-                        if (!hubway.statistics[activeStatistic][station_id][year][month][day][hour]) { return; }
-
-                        sum += hubway.statistics['averageTripDistanceByStation'][row.station_id][year][month][day][hour].markerSize;
-                        
-                        if (hubway.statistics['maxTripDistanceByStation'][row.station_id][year][month][day][hour].markerSize > max) {
-                            max = hubway.statistics['maxTripDistanceByStation'][row.station_id][year][month][day][hour].markerSize;
-                        }
-                        
-                        if (hubway.statistics['minTripDistanceByStation'][row.station_id][year][month][day][hour].markerSize < min) {
-                            min = sum.mean += hubway.statistics['averageTripDistanceByStation'][row.station_id][year][month][day][hour].markerSize;
-                        }
-
-                        count++;               
-                    }); 
-                });
+        // always remove the data layer to update it
+        if (activeMarkers['data']) {
+            activeMarkers['data'].forEach(function(marker) {
+                map.removeLayer(marker);
             });
-        });
-        
-        var mean = count === 0 ? 0 : sum / count;
-                
-        var marker = addMarker(row.latitude, row.longitude, row.station, "max", max, markerOptions[activeStatistic]);
-        overlayMarkers.push({'row': row, 'stat': 'maxTripDistanceByStation', 'marker': marker});
-
-        markerSize = addMarker(row.latitude, row.longitude, row.station, "mean", mean, markerOptions[activeStatistic]);
-        overlayMarkers.push({'row': row, 'stat': 'averageTripDistanceByStation', 'marker': marker});        
-
-        markerSize = addMarker(row.latitude, row.longitude, row.station, "min", min, markerOptions[activeStatistic]);
-        overlayMarkers.push({'row': row, 'stat': 'averageTripDistanceByStation', 'marker': marker});
-
-        description +=  row.station + ", " + Math.round(min, 0) + "-" + Math.round(mean, 0) + "-" + Math.round(max, 0) + " " + activeStatisticUnit + "<br>";
-    });
-
-    description += "</p>";    
-    $("#js_description").html(description);
-}
-
-function showCommute(time) {
-
-    var distance = 0.0025;
-    
-    hubway.stations.forEach(function(row) {
-
-        if (hubway.clustering[time].kMeansLabel[row.station_id] !== undefined) {
-
-            var description = row.station;
-            var diameter = hubway.clustering[time].rawData[row.station_id].meanDistance * 800;
-            var cluster = hubway.clustering[time].kMeansLabel[row.station_id]; 
-            var direction = hubway.clustering[time].rawData[row.station_id].meanVector;
-
-            addMarker(row.latitude, row.longitude, description, cluster, defaultMarkerRadius, markerOptions.default);
-            addVector(row.latitude, row.longitude, direction, distance, cluster);
         }
-    });    
-}
 
-function getStatisticMax(name, outlierBelow, outlierAbove) {
-    var maxValue = 0;
+        var queryResults = illustrations[forStatistic].queryResults();
     
-    Object.keys(hubway.statistics[name]).forEach(function(station) {
-        Object.keys(hubway.statistics[name][station]).forEach(function(year) {
-            if (!selectedTime['year'][year]) { return; }
-                        
-            Object.keys(hubway.statistics[name][station][year]).forEach(function(month) {
-                if (!selectedTime['month'][month]) { return; }
-                                
-                Object.keys(hubway.statistics[name][station][year][month]).forEach(function(day) {
-                    if (!selectedTime['day'][day]) { return; }
-                                        
-                    Object.keys(hubway.statistics[name][station][year][month][day]).forEach(function(hour) {
-                        if (!selectedTime['hour'][hour]) { return; }
-                                                    
-                        if (maxValue === undefined || maxValue < hubway.statistics[name][station][year][month][day][hour].markerSize) {
-            
-                            var potentialValue = hubway.statistics[name][station][year][month][day][hour].markerSize;
-                                                        
-                            if (potentialValue > outlierBelow && potentialValue < outlierAbove) {
-                                maxValue = potentialValue;
-                            }
-                        }
-                    });
-                });
-            });
-        });
-    });   
-    
-    return maxValue; 
-}
+        properties.forEach(function(property) {
 
-function showStationStatistic(name, units, useRawMarkerSize, outlierBelow, outlierAbove) {
+            // add a vector
+            if (property === 'direction') {
 
-    var maxValue = getStatisticMax(name, outlierBelow, outlierAbove);
-    
-    hubway.stations.forEach(function(row) {
-        if (hubway.statistics[name][row.station_id]) {
-            var station = row.station_id;
+                Object.keys(queryResults[property]).forEach(function(station_id) {
         
-            var sum = 0;
-            var count = 0;
+                    var startStation = hubway.stations[station_id];
 
-            Object.keys(hubway.statistics[name][station]).forEach(function(year) {
-                if (!selectedTime['year'][year]) { return; }
-            
-                Object.keys(hubway.statistics[name][station][year]).forEach(function(month) {
-                    if (!selectedTime['month'][month]) { return; }
+                    var maxEndStations = queryResults[property][station_id].length < 5 ? 
+                                            queryResults[property][station_id].length : 5;
                 
-                    Object.keys(hubway.statistics[name][station][year][month]).forEach(function(day) {
-                        if (!selectedTime['day'][day]) { return; }
+                    for (var i=0; i < maxEndStations; i++) {
+                        var endStationIndex = queryResults[property][station_id][i];
+                        var endStation = hubway.stations[endStationIndex];
                     
-                        Object.keys(hubway.statistics[name][station][year][month][day]).forEach(function(hour) {
-                            if (!selectedTime['hour'][hour]) { return; }
-                            
-                            var markerSize = hubway.statistics[name][row.station_id][year][month][day][hour].markerSize;
-                            
-                            if (markerSize > outlierBelow && markerSize < outlierAbove) {
-                                sum += markerSize;
-                                count++; 
-                            }
-                        });
-                    });
+                        addVector(startStation.latitude, startStation.longitude, endStation.latitude, endStation.longitude, "default");
+                    };
                 });
-            });
-            
-            var average = sum / count;
-            
-            if (count === 0) {
-                average = 0;
             }
+        
+            // add a marker
+            else {
 
-            var description = row.station + ", " + 
-                                "sum: " + sum + " " + activeStatisticUnit + ", " +
-                                "avg: " + Math.round(average, 1) + " " + activeStatisticUnit;
+                var maxValue = illustrations[forStatistic].maxValue;
+    
+                Object.keys(queryResults[property]).forEach(function(station_id) {
+     
+                    var station = hubway.stations[station_id];
+             
+                    var markerSize = queryResults[property][station_id];   
+        
+                    var description = station.station + ", " + Math.round(markerSize, 1) + " " + illustrations[forStatistic]['unit'];
 
-            var markerSize = average;
-            var marker;
+                    var useRawMarkerSize = illustrations[forStatistic].useRawMarkerSize;
+                    var options = illustrations[forStatistic].markerOptions;
             
-            if (!useRawMarkerSize) {
-                if (maxValue != 0) {
-                    markerSize = markerSize * (defaultStatisticRadius / maxValue);
-                } else {
-                    markerSize = 0;
-                }
-            }
+                    if (!useRawMarkerSize) {
+                        markerSize = maxValue ? markerSize * Math.sqrt(defaultStatisticRadius / maxValue) : 0;
+                    }
 
-            if (markerOptions[name]) {
-                marker = addMarker(row.latitude, row.longitude, description, "default", markerSize, markerOptions[name]);
-            } else { 
-                marker = addMarker(row.latitude, row.longitude, description, "default", markerSize, markerOptions.default);
-            }
+                    var cluster = properties.length == 1 ? "default" : property;
 
-            marker.bindPopup(description);
-            marker.on('mouseover', function (e) { this.openPopup(); });
-            marker.on('mouseout', function (e) { this.closePopup(); });                
-
-        }
-    }); 
+                    var marker = addMarker(
+                        station.latitude, station.longitude, description, 
+                        cluster, markerSize, illustrations[forStatistic].markerOptions); 
+        
+                    marker.bindPopup(description);
+                    marker.on('mouseover', function (e) { this.openPopup(); });
+                    marker.on('mouseout', function (e) { this.closePopup(); });
+               });
+           }
+       });
+   
+       loading.remove();
+   }, 0);
 }
 
 function resetMapView() {
@@ -388,16 +464,17 @@ function createLoadingOverlay(obj) {
 	return ret;
 }
 
+// add time-related checkboxes
 function setupTimeFilter(group) {
 
     var filters = group + ": ";
 
     availableTimes[group].forEach(function(time) {
         var id = "js_" + group + "_" + time;
-        filters += "<label for='" + id + "'>" + time + "</label><input type='checkbox' id='" + id + "'>";
+        filters += "<label><input type='checkbox' id='" + id + "'>" + time + "</label>";
     });
     
-    // add filters to the DOM
+    // add checkboxes to the DOM
     $("#js_"+group).html(filters);
     
     // attach handlers
@@ -412,20 +489,25 @@ function setupTimeFilter(group) {
             }  
             
             if (activeStatistic !== undefined) {
-                illustrations[activeStatistic]();
-            }
-
-            // refresh time group button states
-            Object.keys(timeSets).forEach(function(key) {
-                refreshTimeFilter(key);
-            });                
+                illustrations[activeStatistic].draw();
+            }            
         });
 
-        if (time == '2016' || group == 'month' || group == 'day' || group == 'hour') {
-            $(checkbox).prop('checked', true);
-            $(checkbox).trigger('change');
-        }
+        if (time == '2016') { $(checkbox).prop('checked', true); };
+    });
+}
 
+function refreshDataFilter(activeFilter) {
+    
+    var filters = ['trips', 'duration', 'distance', 'direction'];
+
+    filters.forEach(function(filter) {
+        
+        if (activeFilter === filter) {
+            $('#js_'+filter).addClass('active');
+        } else {
+            $('#js_'+filter).removeClass('active');        
+        }
     });
 }
 
@@ -435,8 +517,7 @@ function refreshTimeFilter(set) {
     
     Object.keys(timeSets[set]).forEach(function(group) {
         timeSets[set][group].forEach(function(time) {
-            var id = "#js_" + group + "_" + time;            
-            enabled = enabled && $(id).prop('checked');
+            enabled = enabled && selectedTime[group][time];
         });
     });
         
@@ -490,66 +571,60 @@ jQuery(function($) {
         console.log("Unable to load data.json");
 	});
 	
+	DataSource.loadData("data/trips.bin", "data/stations.json")
+		.done(function() {
+			// LOADED, READY TO GO
+		})
+		.fail(function(err) {
+			// TODO: error handling
+			console.log("ERROR:", err);
+		});	
+	
 	// button events
-	$("#js_show_stations").on("click", function() {
+	$("#js_stations").on("click", function() {
 	    removeMarkers();
 	    showStations();
 	});
 	
-	$("#js_show_morning").on("click", function() {
+	$("#js_direction").on("click", function() {
 	    removeMarkers();
-	    showCommute('byDirectionAndDistanceMorning');
+	    showStations();
+	    activeStatistic = 'direction';
+	    illustrations[activeStatistic].draw();
+	    refreshDataFilter('direction');
 	});
 	
-	$("#js_show_evening").on("click", function() {
-        removeMarkers();
-        showCommute('byDirectionAndDistanceEvening');
-	});
-
-	$("#js_show_avg_trip_duration").on("click", function() {
+	$("#js_duration").on("click", function() {
 	    removeMarkers();
-	    activeStatistic = 'averageTripDurationByStation';
-	    activeStatisticUnit = 'minutes';
-	    outlierLowerBound = 0;
-	    outlierUpperBound = 180;
-	    useRawMarkerSize = false;
-        showStationStatistic(activeStatistic, 
-                             activeStatisticUnit,
-                             useRawMarkerSize, 
-                             outlierLowerBound, outlierUpperBound);
-	});
+	    activeStatistic = 'meanDuration';
+	    illustrations[activeStatistic].draw();
+  	    refreshDataFilter('duration');
+    });
 
-	$("#js_show_avg_number_trips").on("click", function() {
+	$("#js_trips").on("click", function() {
 	    removeMarkers();
-	    activeStatistic = 'averageTripsByStation';
-  	    activeStatisticUnit = 'trips';
-  	    outlierLowerBound = 0;
-	    outlierUpperBound = 10000;
-	    useRawMarkerSize = false;
-        showStationStatistic(activeStatistic, 
-                             activeStatisticUnit,
-                             useRawMarkerSize, 
-                             outlierLowerBound, outlierUpperBound);
+	    activeStatistic = 'numberOfTrips';
+	    illustrations[activeStatistic].draw();
+  	    refreshDataFilter('trips');	    
 	});	
 
-	$("#js_show_avg_trip_distance").on("click", function() {
-	    removeMarkers();
-	    showStations();
-	    activeStatistic = 'averageTripDistanceByStation';
-	    activeStatisticUnit = 'meters';
-	    useRawMarkerSize = true;
-        showAverageDistanceByStation();
+	$("#js_distance").on("click", function() {
+	    if (!activeStatistic || activeStatistic !== 'distance') {
+	        removeMarkers();
+	        showStations();
+      	    refreshDataFilter('distance');
+	    }
+	    
+	    activeStatistic = 'distance';
+	    illustrations[activeStatistic].draw();	    
 	});
     
-    // lay out time check boxes
-    Object.keys(availableTimes).forEach(function(key) {
-        setupTimeFilter(key);
-    });
+    // lay out checkboxes for year selection
+    setupTimeFilter('year');
     
-    // attach button events to time groups
+    // attach button events to time sets, like "morning" and "summer"
     Object.keys(timeSets).forEach(function(set) {
         var button = "#js_" + set;
-        $(button).removeClass('enabled');
         
         $(button).on("click", function(e) {
             
@@ -561,25 +636,26 @@ jQuery(function($) {
                 $(button).addClass('active');
                 
                 Object.keys(timeSets[set]).forEach(function(group) {
-                    timeSets[set][group].forEach(function(checkbox) {
-                        var checkbox = "#js_" + group + "_" + checkbox;
-                        $(checkbox).prop('checked', true);
-                        $(checkbox).trigger('change');
-                    });
+                    timeSets[set][group].forEach(function(unit) {
+                        selectedTime[group][unit] = true;
+                    }); 
                 });
                 
             } else {
                 $(button).removeClass('active');
 
                 Object.keys(timeSets[set]).forEach(function(group) {
-                    timeSets[set][group].forEach(function(checkbox) {
-                        var checkbox = "#js_" + group + "_" + checkbox;
-                        $(checkbox).prop('checked', false);
-                        $(checkbox).trigger('change');
+                    timeSets[set][group].forEach(function(unit) {
+                        delete selectedTime[group][unit];
                     });
-                });                
-            }   
+                });
+            }
+            
+            if (activeStatistic !== undefined) {
+                illustrations[activeStatistic].draw();
+            }
         });
+        
+        refreshTimeFilter(set);
     });
-
 });

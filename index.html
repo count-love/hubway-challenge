@@ -14,6 +14,9 @@
 <script src="external/jquery.ui.touch-punch/4bc0091/jquery.ui.touch-punch.js"></script>
 <script src="external/bootstrap/3.3.7/bootstrap.js"></script>
 <script src="external/leaflet/1.0.3/leaflet.js"></script>
+<script src="external/jdataview/2.5.0/jdataview.js"></script>
+<script src="external/jbinary/2.1.3/jbinary.js"></script>
+<script src="datasource.js"></script> 
 <script src="hubway.js"></script>
 </head>
 <body data-datasrc="data.json">
@@ -32,19 +35,17 @@
         <div class="col-xs-4">
             
             <div class="row filter">
-                <button class="btn btn-default" id="js_show_stations">Bike Stations</button>
-            </div>
-            
-            <div class="row filter">            
-                <button class="btn btn-default" id="js_show_morning">Morning Commute</button>
-                <button class="btn btn-default" id="js_show_evening">Evening Commute</button>
+                <button class="btn btn-default" id="js_stations">Bike Stations</button>
             </div>
             
             <div class="row filter">
-                <button class="btn btn-default" id="js_show_avg_number_trips">Trips</button>
-                <button class="btn btn-default" id="js_show_avg_trip_duration">Duration</button>
-                <button class="btn btn-default" id="js_show_avg_trip_distance">Distance</button>
+                <button class="btn btn-default" id="js_trips">Trips</button>
+                <button class="btn btn-default" id="js_duration">Duration</button>
+                <button class="btn btn-default" id="js_distance">Distance</button>
+                <button class="btn btn-default" id="js_direction">Destination</button>
             </div>
+            
+            <div id="js_year"></div>
             
             <div class="row filter">
                 <button class="btn btn-default" id="js_spring">Spring</button>
@@ -59,20 +60,18 @@
             </div>
             
             <div class="row filter">
+                <button class="btn btn-default" id="js_early">Early</button>
                 <button class="btn btn-default" id="js_morning">Morning</button>
+                <button class="btn btn-default" id="js_midday">Midday</button>
+                <button class="btn btn-default" id="js_afternoon">Afternoon</button>            
                 <button class="btn btn-default" id="js_evening">Evening</button>
+                <button class="btn btn-default" id="js_night">Night</button>
             </div>
 
             <hr>
-            
-            <div class="filter row" id="js_year"></div>
-            <div class="filter row" id="js_month"></div>
-            <div class="filter row" id="js_day"></div>
-            <div class="filter row" id="js_hour"></div>
-                        
+ 
             <div class="filter row">
-                <div class="col-xs-12" id="js_description">
-                </div>
+                <div class="col-xs-12" id="js_description"></div>
             </div>
             
         </div>
