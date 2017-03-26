@@ -16,8 +16,10 @@ jQuery(function($) {
 	}).done(function(received_data) {
 		// received data
 		grid = new Grid(received_data.grid);
-		data_bike = received_data.bike;
-		data_mbta = received_data.mbta;
+		data_bike = expandReceivedData(received_data.bike);
+		data_mbta = expandReceivedData(received_data.mbta);
+		
+		console.log(data_bike);
 		
 		// setup map
 		setupMap();
@@ -64,13 +66,25 @@ jQuery(function($) {
 		});
 	}
 	
+	function expandReceivedData(data) {
+		var ret = {};
+		for (var i = 0; i < data.length; ++i) {
+			if (!(data[i][0] in ret)) {
+				ret[data[i][0]] = [];
+			}
+			
+			ret[data[i][0]].push([data[i][1], data[i][2]]);
+		}
+		return ret;
+	}
+	
 	function clearBestModeOverlay() {
 		
 	}
 	
 	function buildBestModeOverlay(start_lat, start_lng) {
 		// get start grid coordinate
-		var start_gc = grid.coordinateToGridIndex(lat, lng);
+		var start_gc = grid.coordinateToGridIndex(start_lat, start_lng);
 		
 		if (-1 === start_gc) {
 			clearBestModeOverlay();
@@ -80,6 +94,7 @@ jQuery(function($) {
 		
 		// make a router
 		var router = new Router();
+		router.routeFrom(start_gc);
 	}
 	
 	function deg2rad(deg) {
@@ -104,7 +119,95 @@ jQuery(function($) {
 	function Router() {
 		// default parameters
 		this.penaltyBike = 180; // 3 minutes
-		this.penaltyTransit = 300; // 5 minutes
+		this.penaltyMbta = 300; // 5 minutes
+		this.walkPace = 0.72; // seconds per meter (5km/hr or 3.1m/hr)
+	}
+	
+	Router.prototype.routeFrom = function(gc) {
+		// none are closed
+		var closed = new Array(grid.count);
+		
+		// fill scores
+		var score_g = new Array(grid.count);
+		score_g.fill(Number.POSITIVE_INFINITY);
+		score_g[gc] = 0;
+		
+		// came from
+		var came_from = new Array(grid.count);
+		came_from[gc] = [-1, 0];
+		
+		// start with grid cell
+		var open = [gc];
+		
+		var walking_deltas = [-1, 1, grid.countWidth, 0 - grid.countWidth]; // only allow lateral moves for now
+		var walking_time = grid.meters * this.walkPace;
+		
+		var i, j, cur, nxt, tmp, mode;
+		while (open.length) {
+			// find lowest score_g to expand next
+			tmp = Number.POSITIVE_INFINITY;
+			for (i = 0; i < open.length; ++i) {
+				if (score_g[open[i]] < tmp) {
+					cur = open[i];
+					tmp = score_g[cur];
+					j = i;
+				}
+			}
+			open.splice(j, 1); // remove open value
+			
+			// mark as closed
+			closed[cur] = true;
+			
+			// mode to here
+			mode = came_from[cur][1];
+			
+			// expand current
+			if (cur in data_bike) {
+				for (i = 0; i < data_bike[cur].length; ++i) {
+					nxt = data_bike[cur][i][0];
+					tmp = score_g[cur] + data_bike[cur][i][1] + this.penaltyBike;
+					if (tmp < score_g[nxt]) {
+						score_g[nxt] = tmp;
+						came_from[nxt] = [cur, mode | 1];
+						if (-1 === open.indexOf(nxt)) {
+							open.push(nxt);
+						}
+					}
+				}
+			}
+			
+			if (cur in data_mbta) {
+				for (i = 0; i < data_mbta[cur].length; ++i) {
+					nxt = data_mbta[cur][i][0];
+					tmp = score_g[cur] + data_mbta[cur][i][1] + this.penaltyMbta;
+					if (tmp < score_g[nxt]) {
+						score_g[nxt] = tmp;
+						came_from[nxt] = [cur, mode | 2];
+						if (-1 === open.indexOf(nxt)) {
+							open.push(nxt);
+						}
+					}
+				}
+			}
+			
+			// walking
+			tmp = score_g[cur] + walking_time;
+			for (i = 0; i < walking_deltas.length; ++i) {
+				nxt = cur + walking_deltas[i];
+				
+				// boundary conditions
+				if (nxt < 0 || nxt >= grid.count) continue;
+				
+				// check score
+				if (tmp < score_g[nxt]) {
+					score_g[nxt] = tmp;
+					came_from[nxt] = [cur, mode];
+					if (-1 === open.indexOf(nxt)) {
+						open.push(nxt);
+					}
+				}
+			}
+		}
 	}
 	
 	
