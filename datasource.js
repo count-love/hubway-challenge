@@ -28,6 +28,30 @@
 			gender: function(v) { return _int2(v) >> 2 & 3; },
 			member: function(v) { return _int2(v) >> 1 & 1; }
 		},
+		AGGREGATORS: {
+			sum: {
+				ingest: function(v, u) { return u + (v || 0); }
+			},
+			mean: {
+				ingest: function(v, u) {
+					if (!v) {
+						return {count: 1, sum: u};
+					}
+					v.count++;
+					v.sum += u;
+					return v;
+				},
+				finalize: function(v) {
+					return v.sum / v.count;
+				}
+			},
+			min: {
+				ingest: function(v, u) { if ("undefined" === typeof v || u < v) return u; return v; }
+			},
+			max: {
+				ingest: function(v, u) { if ("undefined" === typeof v || u > v) return u; return v; }
+			}
+		},
 		isLoaded: function() {
 			return loaded;
 		},
@@ -45,6 +69,8 @@
 				// notify progress
 				dfd.notifyWith(that, "downloaded");
 				
+				var t0 = performance.now();
+				
 				// create data view
 				var bin = DataView ? new DataView(data) : new jDataView(data);
 				
@@ -56,6 +82,9 @@
 					dfd.rejectWith(that, err);
 					return;
 				}
+				
+				var t1 = performance.now();
+				console.log(t1 - t0);
 				
 				// notify progress
 				dfd.notifyWith(that, "parsed");
@@ -83,6 +112,49 @@
 				console.log("gender", this.FIELDS.gender(trips[j]));
 				console.log("member", this.FIELDS.member(trips[j]));
 			}
+			
+			console.log(this.query({startYear: [2011, 2012], startMonth: 6}, "startMonth", null, "sum"));
+		},
+		query: function(filters, grouper, value, aggregator) {
+			var cbFilters = filters ? _compileFiltersToCb(filters) : null;
+			var cbGrouper = grouper ? _compileGrouperToCb(grouper) : function() { return 0; };
+			var cbValue = value ? _compileValueToCb(value) : function() { return 1; };
+			var cbAggregator = _compileAggregatorToCb(aggregator || "sum");
+			
+			
+			var group, val, ret = {};
+			
+			for (var i = 0; i < trips.length; ++i) {
+				// check filters
+				if (cbFilters && !cbFilters(trips[i])) {
+					continue;
+				}
+				
+				// assemble group
+				group = cbGrouper(trips[i]);
+				
+				// get value
+				val = cbValue(trips[i]);
+				
+				// aggregate
+				ret[group] = cbAggregator.ingest(ret[group], val);
+			}
+			
+			// finalize
+			if (cbAggregator.finalize) {
+				for (var prop in ret) {
+					if (ret.hasOwnProperty(prop)) {
+						ret[prop] = cbAggregator.finalize(ret[prop]);
+					}
+				}
+			}
+			
+			// no grouper? return single value
+			if (!grouper) {
+				return ret[0];
+			}
+			
+			return ret;
 		}
 	};
 	
@@ -142,6 +214,119 @@
 			
 			last += cur; // since difference encoded
 			trips[i] = last;
+		}
+	}
+	
+	function _compileFiltersToCb(filters) {
+		switch (typeof filters) {
+			case "function": // allow direct callback
+				return filters;
+			
+			case "object":
+				var filters_cb = [];
+				for (var prop in filters) {
+					if (filters.hasOwnProperty(prop)) {
+						filters_cb.push(_compileFilterToCb(prop, filters[prop]));
+					}
+				}
+				
+				if (filters_cb.length === 1) {
+					return filters_cb[0];
+				}
+				
+				return function(row) {
+					for (var j = 0; j < filters_cb.length; ++j) {
+						if (!filters_cb[j](row)) {
+							return false;
+						}
+					}
+					return true;
+				};
+				
+			default:
+				throw "Unrecognized type for grouping: " + typeof filters;
+		}
+	}
+	
+	function _compileFilterToCb(name, filter) {
+		// get value callback
+		if (!(name in root.DataSource.FIELDS)) {
+			throw "Unrecognized column for filtering: " + name;
+		}
+		var cb = root.DataSource.FIELDS[name];
+		
+		// allow direct callbacks
+		if ("function" === typeof filter) {
+			return function(row) {
+				return filter(cb(row));
+			};
+		}
+		
+		// array of possible values?
+		if ($.isArray(filter)) {
+			var hash = {};
+			for (var j = 0; j < filter.length; ++j) {
+				hash[filter[j]] = true;
+			}
+			return function(row) {
+				return true === hash[cb(row)];
+			};
+		}
+		
+		// equal
+		return function(row) {
+			return filter === cb(row);
+		};
+	}
+	
+	function _compileGrouperToCb(grouper) {
+		switch (typeof grouper) {
+			case "function": // allow direct callback
+				return grouper;
+			
+			case "string":
+				if (grouper in root.DataSource.FIELDS) {
+					return root.DataSource.FIELDS[grouper];
+				}
+				throw "Unrecognized column for grouping: " + grouper;
+			
+			default:
+				throw "Unrecognized type for grouping: " + typeof grouper;
+		}
+	}
+	
+	function _compileValueToCb(value) {
+		switch (typeof value) {
+			case "function": // allow direct callback
+				return value;
+			
+			case "string":
+				if (value in root.DataSource.FIELDS) {
+					return root.DataSource.FIELDS[value];
+				}
+				throw "Unrecognized column for value: " + value;
+			
+			default:
+				throw "Unrecognized type for value: " + typeof value;
+		}
+	}
+	
+	function _compileAggregatorToCb(aggregator) {
+		switch (typeof aggregator) {
+			case "function": // allow direct callback
+				return {ingest: aggregator};
+			
+			case "string":
+				if (aggregator in root.DataSource.AGGREGATORS) {
+					return root.DataSource.AGGREGATORS[aggregator];
+				}
+				throw "Unrecognized column for aggregator: " + aggregator;
+				
+			case "object":
+				return aggregator;
+			
+			default:
+				throw "Unrecognized type for aggregator: " + typeof aggregator;
 		}
 	}
 }).call(this, jQuery);

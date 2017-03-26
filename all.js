@@ -1,18 +1,32 @@
 jQuery(function($) {
-	function processAllData() {
-		var count_start = {};
-		for (var i = 0; i < trips.length; ++i) {
-			var k = trips[i] & masks.stationStart >> shifts.stationStart;
-			count_start[k] = 1 + (count_start[k] || 0);
-		}
-		console.log(count_start);
+	function exampleQuery() {	
+		// start timing
+		var t0 = performance.now();
+		
+		// run query
+		// valid fields: duration, gender, member, startMinute, startYear, startMonth, startWeekday, startHour, stationEnd, stationStart
+		var results = DataSource.query(
+			{ // which results to include, can be null for all or a hash where keys are field names and values are either a single value or an array of values
+				startYear: [2011, 2012],
+				startMonth: 6
+			},
+			"stationStart", // what to group by (can be any field name), or null for no grouping
+			"duration", // what to aggregate (can be any field name), or null to count results
+			"sum" // how to aggregate (can be sum, min, max or mean)
+		);
+		
+		// stop timing
+		var t1 = performance.now();
+		
+		// log it
+		console.log(results);
+		console.log(t1 - t0);
 	}
 	
 	DataSource.loadData("data/trips.bin")
 		.done(function() {
 			// LOADED, READY TO GO
-			console.log("loaded!");
-			this.debugLogSampleData();
+			exampleQuery();
 		})
 		.fail(function(err) {
 			// TODO: error handling
