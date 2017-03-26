@@ -6,8 +6,11 @@
 	// establish the root object (window in browsers))
 	var root = this;
 	
-	// store data
-	var trips, loaded = false;
+	// private properties
+	var loaded = false;
+	var trips, stations; // data
+	var distances, angles; // computed
+	
 	
 	function _int2(v) {
 		return Math.floor(v / 0x100000000);
@@ -30,10 +33,14 @@
 		},
 		AGGREGATORS: {
 			sum: {
-				ingest: function(v, u) { return u + (v || 0); }
+				ingest: function(v, u) {
+					if (isNaN(u)) return v;
+					return u + (v || 0);
+				}
 			},
 			mean: {
 				ingest: function(v, u) {
+					if (isNaN(u)) return v;
 					if (!v) {
 						return {count: 1, sum: u};
 					}
@@ -52,22 +59,44 @@
 				ingest: function(v, u) { if ("undefined" === typeof v || u > v) return u; return v; }
 			}
 		},
+		COMPUTED: {
+			distance: {
+				initialize: function() {
+					if (!distances) {
+						_cacheDistances();
+					}
+				},
+				compute: function(trip) {
+					return distances[trip & 0xffff];
+				}
+			},
+			angle: {
+				initialize: function() {
+					if (!angles) {
+						_cacheAngles();
+					}
+				},
+				compute: function(trip) {
+					return angles[trip & 0xffff];
+				}
+			}
+		},
 		isLoaded: function() {
 			return loaded;
 		},
-		loadData: function(src) {
+		loadData: function(src_trips, src_stations) {
 			// make a promise
-			var dfd = new jQuery.Deferred(), that = this;
+			var dfd_trips = new $.Deferred(), dfd_stations = new $.Deferred(), that = this;
 			
-			jBinary.loadData(src, function(err, data) {
+			jBinary.loadData(src_trips, function(err, data) {
 				// ran into an error?
 				if (err) {
-					dfd.rejectWith(that, err);
+					dfd_trips.rejectWith(that, [err]);
 					return;
 				}
 				
 				// notify progress
-				dfd.notifyWith(that, "downloaded");
+				dfd_trips.notifyWith(that, ["downloaded-trips"]);
 				
 				var t0 = performance.now();
 				
@@ -79,7 +108,7 @@
 					_parseFromDataView(bin);
 				}
 				catch (e) {
-					dfd.rejectWith(that, err);
+					dfd.rejectWith(that, [err]);
 					return;
 				}
 				
@@ -87,14 +116,41 @@
 				console.log(t1 - t0);
 				
 				// notify progress
-				dfd.notifyWith(that, "parsed");
+				dfd_trips.notifyWith(that, ["parsed-trips"]);
 				
 				// set loaded and resolve
 				loaded = true;
-				dfd.resolveWith(that);
+				dfd_trips.resolveWith(that);
 			});
 			
-			return dfd.promise();
+			$.ajax({
+				dataType: "json",
+				url: src_stations
+			}).done(function(data) {
+				// notify progress
+				dfd_stations.notifyWith(that, ["downloaded-stations"]);
+				
+				// confirm that it is indeed an array
+				if ($.isArray(data)) {
+					// store stations
+					stations = data;
+					
+					// not really needed, but consistent with binary
+					dfd_stations.notifyWith(that, ["parsed-stations"]);
+					
+					// mark as resolved
+					dfd_stations.resolveWith(that);
+				}
+				else {
+					// reject
+					dfd_stations.rejectWith(that, ["Expected array of stations."]);
+				}
+			}).fail(function(jqXHR, text, err) {
+				// reject
+				dfd_stations.rejectWith(that, [err, text]);
+			});
+			
+			return $.when(dfd_trips, dfd_stations);
 		},
 		debugLogSampleData: function(num) {
 			for (var i = 0; i < (num||10); ++i) {
@@ -114,6 +170,20 @@
 			}
 			
 			console.log(this.query({startYear: [2011, 2012], startMonth: 6}, "startMonth", null, "sum"));
+		},
+		stations: function() {
+			var ret = [];
+			for (var i = 0; i < stations.length; ++i) {
+				ret.push($.extend({}, stations[i]));
+			}
+			return ret;
+		},
+		stationsByID: function() {
+			var ret = {};
+			for (var i = 0; i < stations.length; ++i) {
+				ret[stations[i].station_id] = $.extend({}, stations[i]);
+			}
+			return ret;
 		},
 		query: function(filters, grouper, value, aggregator) {
 			var cbFilters = filters ? _compileFiltersToCb(filters) : null;
@@ -304,6 +374,15 @@
 				if (value in root.DataSource.FIELDS) {
 					return root.DataSource.FIELDS[value];
 				}
+				
+				if (value in root.DataSource.COMPUTED) {
+					if (root.DataSource.COMPUTED[value].initialize) {
+						root.DataSource.COMPUTED[value].initialize();
+					}
+					
+					return root.DataSource.COMPUTED[value].compute;
+				}
+				
 				throw "Unrecognized column for value: " + value;
 			
 			default:
@@ -327,6 +406,78 @@
 			
 			default:
 				throw "Unrecognized type for aggregator: " + typeof aggregator;
+		}
+	}
+	
+	// computed helpers
+	function _cacheDistances() {
+		var i, j, i_id, j_id, dist;
+		
+		// allocate distances array
+		distances = new Array(256 * 256);
+		for (i = 0; i < (stations.length - 1); ++i) {
+			i_id = stations[i].station_id;
+			
+			// set zero down diagonal
+			distances[i_id << 8 | i_id] = 0;
+			
+			for (j = i + 1; j < stations.length; ++j) {
+				j_id = stations[j].station_id;
+				
+				dist = _calculateDistance(stations[i].longitude, stations[i].latitude, stations[j].longitude, stations[j].latitude);
+				
+				distances[i_id << 8 | j_id] = dist;
+				distances[j_id << 8 | i_id] = dist;
+			}
+		}
+	}
+	
+	function _deg2rad(deg) {
+		return deg * Math.PI / 180;
+	}
+	
+	function _calculateDistance(a_long, a_lat, b_long, b_lat) {
+		// radius of earth in m
+		var r = 6371 * 1000;
+		
+		// convert to radians
+		var a_long_rad = _deg2rad(a_long);
+		var a_lat_rad = _deg2rad(a_lat);
+		var b_long_rad = _deg2rad(b_long);
+		var b_lat_rad = _deg2rad(b_lat);
+		
+		var c = Math.cos(a_lat_rad) * Math.cos(b_lat_rad) * Math.cos(b_long_rad - a_long_rad) + Math.sin(a_lat_rad) * Math.sin(b_lat_rad);
+		return r * Math.acos(c);
+	}
+	
+	function _cacheAngles() {
+		var i, j, i_id, j_id, ang;
+		var delta_x, delta_y;
+		
+		// allocate angles array
+		angles = new Array(256 * 256);
+		for (i = 0; i < (stations.length - 1); ++i) {
+			i_id = stations[i].station_id;
+			
+			// set NaN down diagonal
+			angles[i_id << 8 | i_id] = NaN;
+			
+			for (j = i + 1; j < stations.length; ++j) {
+				j_id = stations[j].station_id;
+				
+				delta_x = stations[i].longitude - stations[j].longitude;
+				delta_y = stations[i].latitude - stations[j].latitude;
+				
+				ang = Math.atan2(delta_y, delta_x);
+				
+				// positive
+				if (ang < 0) {
+					ang += 2 * Math.PI;
+				}
+				
+				angles[i_id << 8 | j_id] = ang;
+				angles[j_id << 8 | i_id] = ang;
+			}
 		}
 	}
 }).call(this, jQuery);
