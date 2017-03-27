@@ -7,6 +7,8 @@ jQuery(function($) {
 	var data_bike;
 	var data_mbta;
 	
+	var result;
+	
 	var map;
 	
 	// load data
@@ -18,8 +20,6 @@ jQuery(function($) {
 		grid = new Grid(received_data.grid);
 		data_bike = expandReceivedData(received_data.bike);
 		data_mbta = expandReceivedData(received_data.mbta);
-		
-		console.log(data_bike);
 		
 		// setup map
 		setupMap();
@@ -64,6 +64,10 @@ jQuery(function($) {
 			// build best mode overlay
 			buildBestModeOverlay(lat, lng);
 		});
+		
+		// add grid
+		map.data.addGeoJson(grid.toGeoJSON());
+		map.data.setStyle({clickable: false, visible: false});
 	}
 	
 	function expandReceivedData(data) {
@@ -79,7 +83,7 @@ jQuery(function($) {
 	}
 	
 	function clearBestModeOverlay() {
-		
+		map.data.setStyle({});
 	}
 	
 	function buildBestModeOverlay(start_lat, start_lng) {
@@ -94,7 +98,21 @@ jQuery(function($) {
 		
 		// make a router
 		var router = new Router();
-		router.routeFrom(start_gc);
+		result = router.routeFrom(start_gc);
+		
+		// redraw map
+		map.data.setStyle(function(cell) {
+			switch (result[cell.getProperty("gc")][1]) {
+				case 0:
+					return {fillColor: 'blue', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
+				case 1:
+					return {fillColor: 'green', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
+				case 2:
+					return {fillColor: 'red', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
+				case 3:
+					return {fillColor: 'orange', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
+			}
+		});
 	}
 	
 	function deg2rad(deg) {
@@ -119,7 +137,7 @@ jQuery(function($) {
 	function Router() {
 		// default parameters
 		this.penaltyBike = 180; // 3 minutes
-		this.penaltyMbta = 300; // 5 minutes
+		this.penaltyMbta = 600; // 5 minutes
 		this.walkPace = 0.72; // seconds per meter (5km/hr or 3.1m/hr)
 	}
 	
@@ -208,6 +226,14 @@ jQuery(function($) {
 				}
 			}
 		}
+		
+		// switch from came_from to travel time for now
+		for (i = 0; i < grid.count; ++i) {
+			came_from[i][0] = score_g[i];
+		}
+		
+		// mode of transportation
+		return came_from;
 	}
 	
 	
@@ -264,17 +290,51 @@ jQuery(function($) {
 		return (qy * this.countWidth) + qx;
 	}
 	
-	Grid.prototype.gridIndexToGridSub = function(coordinate) {
-		var qx = coordinate % this.countWidth;
-		var qy = (coordinate - qx) / this.countWidth;
+	Grid.prototype.gridIndexToGridSub = function(index) {
+		var qx = index % this.countWidth;
+		var qy = (index - qx) / this.countWidth;
 		
 		return {x: qx, y: qy};
 	};
 	
-	Grid.prototype.gridIndexToCoordinate = function(coordinate) {
-		var qx = coordinate % this.countWidth;
-		var qy = (coordinate - qx) / this.countWidth;
+	Grid.prototype.gridIndexToCoordinate = function(index) {
+		var qx = index % this.countWidth;
+		var qy = (index - qx) / this.countWidth;
 		
 		return {lat: this.latMin + this.sizeHeight * (qy + 0.5), lng: this.lngMin + this.sizeWidth * (qx + 0.5)};
+	};
+	
+	Grid.prototype.toGeoJSON = function() {
+		var features = [];
+		
+		var qx, qy;
+		for (var i = 0; i < this.count; ++i) {
+			// quantized
+			qx = i % this.countWidth;
+			qy = (i - qx) / this.countWidth;
+			console.log(qx, qy);
+			
+			// add feature
+			features.push({
+				type: "Feature",
+				geometry: {
+					type: "Polygon",
+					coordinates: [[
+						[this.lngMin + (qx * this.sizeWidth), this.latMin + (qy * this.sizeHeight)],
+						[this.lngMin + ((qx + 1) * this.sizeWidth), this.latMin + (qy * this.sizeHeight)],
+						[this.lngMin + ((qx + 1) * this.sizeWidth), this.latMin + ((qy + 1) * this.sizeHeight)],
+						[this.lngMin + (qx * this.sizeWidth), this.latMin + ((qy + 1) * this.sizeHeight)],
+						[this.lngMin + (qx * this.sizeWidth), this.latMin + (qy * this.sizeHeight)]
+					]]
+				},
+				properties: {
+					gc: i
+				}
+			});
+		}
+		
+		
+		// return TopoJSON format
+		return {type: "FeatureCollection", features: features};
 	};
 });
