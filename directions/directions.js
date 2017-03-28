@@ -6,6 +6,7 @@ jQuery(function($) {
 	var grid;
 	var data_bike;
 	var data_mbta;
+	var water;
 	
 	var result;
 	
@@ -14,12 +15,17 @@ jQuery(function($) {
 	// load data
 	$.ajax({
 		dataType: "json",
-		url:"../data/directions.json"
+		url:"../data/directions-s.json"
 	}).done(function(received_data) {
 		// received data
 		grid = new Grid(received_data.grid);
 		data_bike = expandReceivedData(received_data.bike);
 		data_mbta = expandReceivedData(received_data.mbta);
+		water = received_data.water;
+		
+		// debug
+		console.log('** loaded **');
+		console.log('Grid size', grid.count);
 		
 		// setup map
 		setupMap();
@@ -83,7 +89,7 @@ jQuery(function($) {
 	}
 	
 	function clearBestModeOverlay() {
-		map.data.setStyle({});
+		map.data.setStyle({clickable: false, visible: false});
 	}
 	
 	function buildBestModeOverlay(start_lat, start_lng) {
@@ -100,9 +106,17 @@ jQuery(function($) {
 		var router = new Router();
 		result = router.routeFrom(start_gc);
 		
+		// failed? probably clicked water
+		if (!result) {
+			return false;
+		}
+		
 		// redraw map
 		map.data.setStyle(function(cell) {
+			// based on mode of transit
 			switch (result[cell.getProperty("gc")][1]) {
+				case -1:
+					return {clickable: false, visible: false};
 				case 0:
 					return {fillColor: 'blue', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
 				case 1:
@@ -136,14 +150,27 @@ jQuery(function($) {
 	// ROUTER
 	function Router() {
 		// default parameters
-		this.penaltyBike = 180; // 3 minutes
+		this.penaltyBike = 120; // 3 minutes
 		this.penaltyMbta = 600; // 5 minutes
 		this.walkPace = 0.72; // seconds per meter (5km/hr or 3.1m/hr)
+		this.waterThreshold = 0.3;
 	}
 	
 	Router.prototype.routeFrom = function(gc) {
+		var i, j;
+		
 		// none are closed
 		var closed = new Array(grid.count);
+		
+		// pre-close water threshold
+		for (i = 0; i < grid.count; ++i) {
+			if (water[i] > this.waterThreshold) {
+				closed[i] = true;
+				if (i === gc) {
+					return false;
+				}
+			}
+		}
 		
 		// fill scores
 		var score_g = new Array(grid.count);
@@ -157,10 +184,11 @@ jQuery(function($) {
 		// start with grid cell
 		var open = [gc];
 		
-		var walking_deltas = [-1, 1, grid.countWidth, 0 - grid.countWidth]; // only allow lateral moves for now
-		var walking_time = grid.meters * this.walkPace;
+		var walking_time = grid.meters * this.walkPace, walking_time_diagonal = walking_time * Math.SQRT2;
+		var walking_deltas = [-1, 1, grid.countWidth, 0 - grid.countWidth]; // , grid.countWidth - 1, grid.countWidth + 1, 0 - grid.countWidth - 1, , 0 - grid.countWidth + 1
+		var walking_times = [walking_time, walking_time, walking_time, walking_time];
 		
-		var i, j, cur, nxt, tmp, mode;
+		var cur, nxt, tmp, mode;
 		while (open.length) {
 			// find lowest score_g to expand next
 			tmp = Number.POSITIVE_INFINITY;
@@ -183,8 +211,8 @@ jQuery(function($) {
 			if (cur in data_bike) {
 				for (i = 0; i < data_bike[cur].length; ++i) {
 					nxt = data_bike[cur][i][0];
-					tmp = score_g[cur] + data_bike[cur][i][1] + this.penaltyBike;
-					if (tmp < score_g[nxt]) {
+					tmp = score_g[cur] + data_bike[cur][i][1] + this.penaltyBike + walking_time / 2;
+					if (!closed[nxt] && tmp < score_g[nxt]) {
 						score_g[nxt] = tmp;
 						came_from[nxt] = [cur, mode | 1];
 						if (-1 === open.indexOf(nxt)) {
@@ -197,8 +225,8 @@ jQuery(function($) {
 			if (cur in data_mbta) {
 				for (i = 0; i < data_mbta[cur].length; ++i) {
 					nxt = data_mbta[cur][i][0];
-					tmp = score_g[cur] + data_mbta[cur][i][1] + this.penaltyMbta;
-					if (tmp < score_g[nxt]) {
+					tmp = score_g[cur] + data_mbta[cur][i][1] + this.penaltyMbta + walking_time / 2;
+					if (!closed[nxt] && tmp < score_g[nxt]) {
 						score_g[nxt] = tmp;
 						came_from[nxt] = [cur, mode | 2];
 						if (-1 === open.indexOf(nxt)) {
@@ -217,7 +245,7 @@ jQuery(function($) {
 				if (nxt < 0 || nxt >= grid.count) continue;
 				
 				// check score
-				if (tmp < score_g[nxt]) {
+				if (!closed[nxt] && tmp < score_g[nxt]) {
 					score_g[nxt] = tmp;
 					came_from[nxt] = [cur, mode];
 					if (-1 === open.indexOf(nxt)) {
@@ -229,7 +257,13 @@ jQuery(function($) {
 		
 		// switch from came_from to travel time for now
 		for (i = 0; i < grid.count; ++i) {
-			came_from[i][0] = score_g[i];
+			if (came_from[i]) {
+				came_from[i][0] = score_g[i];
+			}
+			else {
+				// placeholder for inaccessible
+				came_from[i] = [-1, -1];
+			}
 		}
 		
 		// mode of transportation
@@ -312,7 +346,6 @@ jQuery(function($) {
 			// quantized
 			qx = i % this.countWidth;
 			qy = (i - qx) / this.countWidth;
-			console.log(qx, qy);
 			
 			// add feature
 			features.push({
