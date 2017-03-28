@@ -3,10 +3,10 @@ jQuery(function($) {
 	
 	/* REQUIRES: jQuery and google maps */
 	
+	var router;
 	var grid;
 	var data_bike;
 	var data_mbta;
-	var water;
 	
 	var result;
 	
@@ -19,9 +19,14 @@ jQuery(function($) {
 	}).done(function(received_data) {
 		// received data
 		grid = new Grid(received_data.grid);
+		
+		// setup router
+		router = new Router(grid);
+		router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
+		
+		// data
 		data_bike = expandReceivedData(received_data.bike);
 		data_mbta = expandReceivedData(received_data.mbta);
-		water = received_data.water;
 		
 		// debug
 		console.log('** loaded **');
@@ -33,6 +38,7 @@ jQuery(function($) {
 		// TODO: write data handling
 	});
 
+	// create and configure google map
 	function setupMap() {
 		// create the map
 		map = new google.maps.Map(document.getElementById('map'), {
@@ -51,11 +57,7 @@ jQuery(function($) {
 			
 			// hide POI
 			clickableIcons: false,
-			styles: [{
-				featureType: "poi",
-				elementType: "labels",
-				stylers: [{visibility: "off"}]
-			}]
+			styles: styleSilver()
 		});
 		
 		// fit the map
@@ -74,6 +76,10 @@ jQuery(function($) {
 		// add grid
 		map.data.addGeoJson(grid.toGeoJSON());
 		map.data.setStyle({clickable: false, visible: false});
+		
+		// add bike layer
+		//var bikeLayer = new google.maps.BicyclingLayer();
+		//bikeLayer.setMap(map);
 	}
 	
 	function expandReceivedData(data) {
@@ -103,11 +109,27 @@ jQuery(function($) {
 		}
 		
 		// make a router
-		var router = new Router();
+		
+		
+		var t0, t1, rt = 0, iter = 10;
+		for (var i = 0; i < iter; ++i) {
+			t0 = performance.now();
+			result = router.routeFrom(start_gc);
+			t1 = performance.now();
+			rt += t1 - t0;
+		}
+		console.log(rt / iter);
+		
+		
+		
+		// 
 		result = router.routeFrom(start_gc);
 		
 		// failed? probably clicked water
 		if (!result) {
+			// clear current overlay
+			
+			clearBestModeOverlay();
 			return false;
 		}
 		
@@ -147,30 +169,99 @@ jQuery(function($) {
 		return r * Math.acos(c);
 	}
 	
+	// MODE OVERLAYS
+	function Mode(flag) {
+		this.enabled = true;
+		this.flag = flag || 0;
+	}
+	
+	function ModeLookup(transit_data, penalty, flag) {
+		// call parent
+		Mode.call(this, flag || 0);
+		
+		// add lookup data
+		if ($.isArray(transit_data)) {
+			this.data = {};
+			for (var i = 0; i < transit_data.length; ++i) {
+				if (!(transit_data[i][0] in this.data)) {
+					this.data[transit_data[i][0]] = new Array();
+				}
+				
+				// append it
+				this.data[transit_data[i][0]].push(transit_data[i].slice(1));
+			}
+		}
+		else {
+			this.data = transit_data;
+		}
+		
+		// store a penalty
+		this.penalty = penalty || 0;
+	}
+	
+	// inherit
+	ModeLookup.prototype = Object.create(Mode.prototype);
+	ModeLookup.prototype.constructor = ModeLookup;
+	
+	ModeLookup.prototype.routesFrom = function(cur) {
+		// not in the data
+		if (!(cur in this.data)) {
+			return [];
+		}
+		
+		return this.data[cur];
+	}
+	
 	// ROUTER
-	function Router() {
+	function Router(grid) {
+		// gird
+		this.grid = grid;
+		
 		// default parameters
 		this.penaltyBike = 120; // 3 minutes
 		this.penaltyMbta = 600; // 5 minutes
 		this.walkPace = 0.72; // seconds per meter (5km/hr or 3.1m/hr)
-		this.waterThreshold = 0.3;
+		
+		// exclusion array
+		this.closed_initial = new Array();
+		
+		// transit modes
+		this.modes = new Array();
+	}
+	
+	Router.prototype.excludeCoordinatesAndWater = function(exclude, water, water_threshold) {
+		var i;
+		
+		// copy exclude array
+		this.closed_initial = new Array(this.grid.count);
+		
+		for (i = 0; i < exclude.length; ++i) {
+			this.closed_initial[exclude[i]] = true;
+		}
+		
+		if (water) {
+			// default
+			if (!water_threshold) {
+				water_threshold = 0.3;
+			}
+			
+			// pre-close water threshold
+			for (i = 0; i < this.grid.count; ++i) {
+				if (water[i] > water_threshold) {
+					this.closed_initial[i] = true;
+				}
+			}
+		}
 	}
 	
 	Router.prototype.routeFrom = function(gc) {
 		var i, j;
 		
-		// none are closed
-		var closed = new Array(grid.count);
+		// seed closed with water / excluded points
+		var closed = this.closed_initial.slice();
 		
-		// pre-close water threshold
-		for (i = 0; i < grid.count; ++i) {
-			if (water[i] > this.waterThreshold) {
-				closed[i] = true;
-				if (i === gc) {
-					return false;
-				}
-			}
-		}
+		// starting point is excluded?
+		if (closed[gc]) return false;
 		
 		// fill scores
 		var score_g = new Array(grid.count);
@@ -184,11 +275,12 @@ jQuery(function($) {
 		// start with grid cell
 		var open = [gc];
 		
-		var walking_time = grid.meters * this.walkPace, walking_time_diagonal = walking_time * Math.SQRT2;
-		var walking_deltas = [-1, 1, grid.countWidth, 0 - grid.countWidth]; // , grid.countWidth - 1, grid.countWidth + 1, 0 - grid.countWidth - 1, , 0 - grid.countWidth + 1
+		var walking_time = this.grid.meters * this.walkPace, walking_time_diagonal = walking_time * Math.SQRT2;
+		var walking_deltas = [-1, 1, this.grid.countWidth, 0 - this.grid.countWidth]; // , grid.countWidth - 1, grid.countWidth + 1, 0 - grid.countWidth - 1, , 0 - grid.countWidth + 1
 		var walking_times = [walking_time, walking_time, walking_time, walking_time];
 		
 		var cur, nxt, tmp, mode;
+		var potential;
 		while (open.length) {
 			// find lowest score_g to expand next
 			tmp = Number.POSITIVE_INFINITY;
@@ -370,4 +462,19 @@ jQuery(function($) {
 		// return TopoJSON format
 		return {type: "FeatureCollection", features: features};
 	};
+	
+	
+	// STYLES
+	function stylePlain() {
+		return [{
+				featureType: "poi",
+				elementType: "labels",
+				stylers: [{visibility: "off"}]
+			}];
+	}
+	
+	function styleSilver() {
+		// from google style builder
+		return [{"elementType":"geometry","stylers":[{"color":"#f5f5f5"}]},{"elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#f5f5f5"}]},{"featureType":"administrative.land_parcel","stylers":[{"visibility":"off"}]},{"featureType":"administrative.land_parcel","elementType":"labels.text.fill","stylers":[{"color":"#bdbdbd"}]},{"featureType":"administrative.neighborhood","stylers":[{"visibility":"off"}]},{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#eeeeee"}]},{"featureType":"poi","elementType":"labels.text","stylers":[{"visibility":"off"}]},{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"featureType":"poi.business","stylers":[{"visibility":"off"}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#e5e5e5"}]},{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#ffffff"}]},{"featureType":"road","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"road.arterial","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road.arterial","elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#dadada"}]},{"featureType":"road.highway","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road.highway","elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},{"featureType":"road.local","stylers":[{"visibility":"off"}]},{"featureType":"road.local","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]},{"featureType":"transit","stylers":[{"visibility":"off"}]},{"featureType":"transit.line","elementType":"geometry","stylers":[{"color":"#e5e5e5"}]},{"featureType":"transit.station","elementType":"geometry","stylers":[{"color":"#eeeeee"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#c9c9c9"}]},{"featureType":"water","elementType":"labels.text","stylers":[{"visibility":"off"}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]}];
+	}
 });
