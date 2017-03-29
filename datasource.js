@@ -357,6 +357,7 @@
 				var filters_cb = [];
 				for (var prop in filters) {
 					if (filters.hasOwnProperty(prop)) {
+						if (null === filters[prop]) continue; // null? no filter needed
 						filters_cb.push(_compileFilterToCb(prop, filters[prop]));
 					}
 				}
