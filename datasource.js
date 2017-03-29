@@ -189,28 +189,50 @@
 			return ret;
 		},
 		query: function(filters, grouper, value, aggregator) {
-			var cbFilters = filters ? _compileFiltersToCb(filters) : null;
 			var cbGrouper = grouper ? _compileGrouperToCb(grouper) : function() { return 0; };
 			var cbValue = value ? _compileValueToCb(value) : function() { return 1; };
 			var cbAggregator = _compileAggregatorToCb(aggregator || "sum");
 			
-			
+			// variables for iterating
+			var i;
 			var group, val, ret = {};
 			
-			for (var i = 0; i < trips.length; ++i) {
-				// check filters
-				if (cbFilters && !cbFilters(trips[i])) {
-					continue;
+			// allow passing in a set of filters
+			if ($.isArray(filters)) {
+				// received array of prefiltered rows, just evaluate those rows
+				var t;
+				for (i = 0; i < filters.length; ++i) {
+					t = filters[i];
+				
+					// assemble group
+					group = cbGrouper(t);
+					
+					// get value
+					val = cbValue(t);
+					
+					// aggregate
+					ret[group] = cbAggregator.ingest(ret[group], val);
 				}
+			}
+			else {
+				// received set of filters, evaluate all rows
+				var cbFilters = filters ? _compileFiltersToCb(filters) : null;
 				
-				// assemble group
-				group = cbGrouper(trips[i]);
-				
-				// get value
-				val = cbValue(trips[i]);
-				
-				// aggregate
-				ret[group] = cbAggregator.ingest(ret[group], val);
+				for (i = 0; i < trips.length; ++i) {
+					// check filters
+					if (cbFilters && !cbFilters(trips[i])) {
+						continue;
+					}
+					
+					// assemble group
+					group = cbGrouper(trips[i]);
+					
+					// get value
+					val = cbValue(trips[i]);
+					
+					// aggregate
+					ret[group] = cbAggregator.ingest(ret[group], val);
+				}
 			}
 			
 			// finalize
@@ -225,6 +247,42 @@
 			// no grouper? return single value
 			if (!grouper) {
 				return ret[0];
+			}
+			
+			return ret;
+		},
+		cacheFilter: function(filters, threshold) {
+			// compile filters to callback
+			var cbFilters = filters ? _compileFiltersToCb(filters) : null;
+			
+			// include everything? nothing to cache
+			if (!cbFilters) {
+				return filters;
+			}
+			
+			// default threshold
+			if (typeof threshold === "undefined") {
+				threshold = 0.25;
+			}
+			
+			// when to check threshold
+			var check_threshold = Math.floor(trips.length / 4);
+			
+			// return
+			var ret = new Array();
+			
+			for (var i = 0; i < trips.length; ++i) {
+				// append it
+				if (cbFilters(trips[i])) {
+					ret.push(trips[i]);
+				}
+				
+				// abort if not efficient
+				if (i === check_threshold) {
+					if (ret.length > (threshold * check_threshold)) {
+						return filters;
+					}
+				}
 			}
 			
 			return ret;

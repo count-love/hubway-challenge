@@ -43,8 +43,27 @@ jQuery(function($) {
 			// LOADED, READY TO GO
 			exampleQuery();
 			
+			// raw query
 			profileCallback(function() {
-				DataSource.query(null, null, null, "sum");
+				DataSource.query({
+					startYear: [2011, 2012],
+					startMonth: 6,
+					member: null
+				}, "stationStart", null, "sum");
+			});
+			
+			// cache filter
+			var cachedFilter;
+			profileCallback(function() {
+				cachedFilter = DataSource.cacheFilter({
+					startYear: [2011, 2012],
+					startMonth: 6
+				});
+			});
+			
+			// use cached filter
+			profileCallback(function() {
+				DataSource.query(cachedFilter, "stationStart", null, "sum");
 			});
 		})
 		.fail(function(err) {
