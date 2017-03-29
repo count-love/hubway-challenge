@@ -3,13 +3,14 @@ jQuery(function($) {
 	
 	/* REQUIRES: jQuery and google maps */
 	
+	// grid and router
 	var router;
 	var grid;
-	var data_bike;
-	var data_mbta;
 	
+	// current result (for redrawing)
 	var result;
 	
+	// google maps object
 	var map;
 	
 	// load data
@@ -24,9 +25,10 @@ jQuery(function($) {
 		router = new Router(grid);
 		router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
 		
-		// data
-		data_bike = expandReceivedData(received_data.bike);
-		data_mbta = expandReceivedData(received_data.mbta);
+		// add modes
+		router.addMode(new ModeLookup("bike", received_data.bike, 120, 1));
+		router.addMode(new ModeLookup("mbta", received_data.mbta, 600, 2));
+		router.addMode(new ModeWalk());
 		
 		// debug
 		console.log('** loaded **');
@@ -108,9 +110,7 @@ jQuery(function($) {
 			return;
 		}
 		
-		// make a router
-		
-		
+		/*
 		var t0, t1, rt = 0, iter = 10;
 		for (var i = 0; i < iter; ++i) {
 			t0 = performance.now();
@@ -119,10 +119,9 @@ jQuery(function($) {
 			rt += t1 - t0;
 		}
 		console.log(rt / iter);
+		*/
 		
-		
-		
-		// 
+		// route
 		result = router.routeFrom(start_gc);
 		
 		// failed? probably clicked water
@@ -170,14 +169,17 @@ jQuery(function($) {
 	}
 	
 	// MODE OVERLAYS
-	function Mode(flag) {
+	function Mode(name, penalty, flag) {
+		this.name = name;
 		this.enabled = true;
+		this.penalty = penalty || 0;
 		this.flag = flag || 0;
+		this.router = null;
 	}
 	
-	function ModeLookup(transit_data, penalty, flag) {
+	function ModeLookup(name, transit_data, penalty, flag) {
 		// call parent
-		Mode.call(this, flag || 0);
+		Mode.call(this, name, penalty || 0, flag || 0);
 		
 		// add lookup data
 		if ($.isArray(transit_data)) {
@@ -194,16 +196,12 @@ jQuery(function($) {
 		else {
 			this.data = transit_data;
 		}
-		
-		// store a penalty
-		this.penalty = penalty || 0;
 	}
-	
-	// inherit
 	ModeLookup.prototype = Object.create(Mode.prototype);
 	ModeLookup.prototype.constructor = ModeLookup;
 	
-	ModeLookup.prototype.routesFrom = function(cur) {
+	// route from... just look up in table
+	ModeLookup.prototype.routesFrom = function(rtr, cur) {
 		// not in the data
 		if (!(cur in this.data)) {
 			return [];
@@ -212,21 +210,94 @@ jQuery(function($) {
 		return this.data[cur];
 	}
 	
+	function ModeWalk(pace, penalty, flag) {
+		// call parent
+		Mode.call(this, "walk", penalty || 0, flag || 0);
+		
+		// store pace
+		this.pace = pace || 0.72; // seconds per meter (5km/hr or 3.1m/hr)
+		
+		// allow diagonal movements?
+		this.allow_diagonal = true;
+	}
+	ModeWalk.prototype = Object.create(Mode.prototype);
+	ModeWalk.prototype.constructor = ModeLookup;
+	
+	// route from... look up coordinates
+	ModeWalk.prototype.routesFrom = function(rtr, cur) {
+		var qx = cur % rtr.grid.countWidth;
+		var qy = (cur - qx) / rtr.grid.countWidth;
+		
+		// return
+		var ret = new Array();
+		
+		// lateral
+		var time_lateral = rtr.grid.meters * this.pace;
+		if (qx > 0) {
+			ret.push([cur - 1, time_lateral]);
+		}
+		if (qx < (rtr.grid.countWidth - 1)) {
+			ret.push([cur + 1, time_lateral]);
+		}
+		if (qy > 0) {
+			ret.push([cur - rtr.grid.countWidth, time_lateral]);
+		}
+		if (qy < (rtr.grid.countHeight - 1)) {
+			ret.push([cur + rtr.grid.countWidth, time_lateral]);
+		}
+		
+		// diagonal
+		if (this.allow_diagonal) {
+			var time_diagonal = time_lateral * Math.SQRT2;
+			
+			if (qx > 0 && qy > 0) {
+				ret.push([cur - rtr.grid.countWidth - 1, time_lateral]);
+			}
+			if (qx < (rtr.grid.countWidth - 1) && qy > 0) {
+				ret.push([cur - rtr.grid.countWidth + 1, time_lateral]);
+			}
+			
+			if (qx > 0 && qy < (rtr.grid.countHeight - 1)) {
+				ret.push([cur + rtr.grid.countWidth - 1, time_lateral]);
+			}
+			if (qx < (rtr.grid.countWidth - 1) && qy < (rtr.grid.countHeight - 1)) {
+				ret.push([cur + rtr.grid.countWidth + 1, time_lateral]);
+			}
+		}
+		
+		return ret;
+	}
+	
 	// ROUTER
 	function Router(grid) {
 		// gird
 		this.grid = grid;
 		
-		// default parameters
-		this.penaltyBike = 120; // 3 minutes
-		this.penaltyMbta = 600; // 5 minutes
-		this.walkPace = 0.72; // seconds per meter (5km/hr or 3.1m/hr)
+		// transit modes
+		this.modes = new Array();
 		
 		// exclusion array
 		this.closed_initial = new Array();
+	}
+	
+	Router.prototype.addMode = function(mode) {
+		for (var i = 0; i < this.modes; ++i) {
+			if (this.modes[i].name === name) {
+				throw "There is already a mode with name " + mode + ".";
+			}
+		}
 		
-		// transit modes
-		this.modes = new Array();
+		// add mode
+		this.modes.push(mode);
+	}
+	
+	Router.prototype.getModeByName = function(name) {
+		for (var i = 0; i < this.modes; ++i) {
+			if (this.modes[i].name === name) {
+				return this.modes[i];
+			}
+		}
+		return null;
 	}
 	
 	Router.prototype.excludeCoordinatesAndWater = function(exclude, water, water_threshold) {
@@ -275,10 +346,6 @@ jQuery(function($) {
 		// start with grid cell
 		var open = [gc];
 		
-		var walking_time = this.grid.meters * this.walkPace, walking_time_diagonal = walking_time * Math.SQRT2;
-		var walking_deltas = [-1, 1, this.grid.countWidth, 0 - this.grid.countWidth]; // , grid.countWidth - 1, grid.countWidth + 1, 0 - grid.countWidth - 1, , 0 - grid.countWidth + 1
-		var walking_times = [walking_time, walking_time, walking_time, walking_time];
-		
 		var cur, nxt, tmp, mode;
 		var potential;
 		while (open.length) {
@@ -299,56 +366,34 @@ jQuery(function($) {
 			// mode to here
 			mode = came_from[cur][1];
 			
-			// expand current
-			if (cur in data_bike) {
-				for (i = 0; i < data_bike[cur].length; ++i) {
-					nxt = data_bike[cur][i][0];
-					tmp = score_g[cur] + data_bike[cur][i][1] + this.penaltyBike + walking_time / 2;
-					if (!closed[nxt] && tmp < score_g[nxt]) {
+			for (j = 0; j < this.modes.length; ++j) {
+				potential = this.modes[j].routesFrom(this, cur);
+				for (i = 0; i < potential.length; ++i) {
+					nxt = potential[i][0];
+					
+					// already closed?
+					if (closed[nxt]) continue;
+					
+					// check score
+					tmp = score_g[cur] + potential[i][1] + this.modes[j].penalty;
+					if (tmp < score_g[nxt]) {
+						// update best score for next grid point
 						score_g[nxt] = tmp;
-						came_from[nxt] = [cur, mode | 1];
+						
+						// since better route, update how we arrived to grid point
+						came_from[nxt] = [cur, mode | this.modes[j].flag];
+						
+						// add to open set
 						if (-1 === open.indexOf(nxt)) {
 							open.push(nxt);
 						}
-					}
-				}
-			}
-			
-			if (cur in data_mbta) {
-				for (i = 0; i < data_mbta[cur].length; ++i) {
-					nxt = data_mbta[cur][i][0];
-					tmp = score_g[cur] + data_mbta[cur][i][1] + this.penaltyMbta + walking_time / 2;
-					if (!closed[nxt] && tmp < score_g[nxt]) {
-						score_g[nxt] = tmp;
-						came_from[nxt] = [cur, mode | 2];
-						if (-1 === open.indexOf(nxt)) {
-							open.push(nxt);
-						}
-					}
-				}
-			}
-			
-			// walking
-			tmp = score_g[cur] + walking_time;
-			for (i = 0; i < walking_deltas.length; ++i) {
-				nxt = cur + walking_deltas[i];
-				
-				// boundary conditions
-				if (nxt < 0 || nxt >= grid.count) continue;
-				
-				// check score
-				if (!closed[nxt] && tmp < score_g[nxt]) {
-					score_g[nxt] = tmp;
-					came_from[nxt] = [cur, mode];
-					if (-1 === open.indexOf(nxt)) {
-						open.push(nxt);
 					}
 				}
 			}
 		}
 		
 		// switch from came_from to travel time for now
-		for (i = 0; i < grid.count; ++i) {
+		for (i = 0; i < this.grid.count; ++i) {
 			if (came_from[i]) {
 				came_from[i][0] = score_g[i];
 			}
