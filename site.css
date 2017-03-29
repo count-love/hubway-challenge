@@ -1,5 +1,5 @@
 body > .container {
-    width: 92%;
+    width: 100%;
     margin: 0 auto;
 }
 
@@ -30,25 +30,14 @@ header + div, header + section {
 	font-style: italic;
 }
 
-.splash {
-	font-size: 21px;
-	font-weight: 200;
-	margin-bottom: 30px;
-}
-
-.splash strong {
-    font-weight: 500;
-}
-
 button {
-    margin-left: 5px;
-    margin-right: 5px;
+    margin-right: 2px;
 }
 
 hr {
     color: #e8e8e8;
     background: #e8e8e8;
-    width: 80%;
+    width: 90%;
     height: 1px;
 	border: 0;
     margin-bottom: 1em;
@@ -125,6 +114,13 @@ footer a, footer a:visited, footer a:hover {
     width: 100%;
 }
 
+.scrollable-menu {
+    width: auto;
+    height: auto;
+    max-height: 500px;
+    overflow-x: hidden;
+}
+
 /* data table */
 #dataTable {
 	width: auto;
@@ -141,4 +137,13 @@ footer a, footer a:visited, footer a:hover {
 
 .dataOverflow {
 	display: none;
+}
+
+.results_title {
+    font-weight: bold;
+    margin-bottom: 2em;
+}
+
+.results_group {
+    margin-bottom: 1em;
 }
