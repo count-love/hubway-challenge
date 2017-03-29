@@ -1,14 +1,15 @@
 jQuery(function($) {
 	"use strict";
 	
-	/* REQUIRES: jQuery and google maps */
+	/* REQUIRES: jQuery, d3 and Google maps */
 	
 	// grid and router
 	var router;
 	var grid;
 	
 	// current result (for redrawing)
-	var result;
+	var result = false;
+	var mode = "mode"; // mode or time
 	
 	// google maps object
 	var map;
@@ -72,7 +73,7 @@ jQuery(function($) {
 			var lat = lm.latLng.lat(), lng = lm.latLng.lng();
 			
 			// build best mode overlay
-			buildBestModeOverlay(lat, lng);
+			buildOverlay(lat, lng);
 		});
 		
 		// add grid
@@ -84,30 +85,18 @@ jQuery(function($) {
 		//bikeLayer.setMap(map);
 	}
 	
-	function expandReceivedData(data) {
-		var ret = {};
-		for (var i = 0; i < data.length; ++i) {
-			if (!(data[i][0] in ret)) {
-				ret[data[i][0]] = [];
-			}
-			
-			ret[data[i][0]].push([data[i][1], data[i][2]]);
-		}
-		return ret;
-	}
-	
-	function clearBestModeOverlay() {
+	function clearOverlay() {
 		map.data.setStyle({clickable: false, visible: false});
 	}
 	
-	function buildBestModeOverlay(start_lat, start_lng) {
+	function buildOverlay(start_lat, start_lng) {
 		// get start grid coordinate
 		var start_gc = grid.coordinateToGridIndex(start_lat, start_lng);
 		
 		if (-1 === start_gc) {
-			clearBestModeOverlay();
+			clearOverlay();
 			// TODO: show message about outside of region?
-			return;
+			return false;
 		}
 		
 		/*
@@ -127,9 +116,43 @@ jQuery(function($) {
 		// failed? probably clicked water
 		if (!result) {
 			// clear current overlay
-			
-			clearBestModeOverlay();
+			clearOverlay();
 			return false;
+		}
+		
+		// draw overlay
+		drawOverlay();
+	}
+	
+	function drawOverlay() {	
+		if (!result) {
+			// clear current overlay
+			clearOverlay();
+			return;
+		}
+		
+		// transit time
+		if ("time" === mode) {
+			// calculate rng
+			var rng = d3.extent(result, function(a) { return a[0]; });
+			console.log(rng);
+			
+			// make scale
+			var scale = d3.scaleLinear().domain([rng[0], (rng[0] + rng[1]) / 2, rng[1]])
+				.range(["#4575b4", "#ffffbf", "#a50026"])
+				.interpolate(d3.interpolateHcl);
+			
+			
+			// redraw map
+			map.data.setStyle(function(cell) {
+				var tm = result[cell.getProperty("gc")][0];
+				if (tm < 0) {
+					return {clickable: false, visible: false};
+				}
+				return {fillColor: scale(tm), clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
+			});
+			
+			return;
 		}
 		
 		// redraw map
