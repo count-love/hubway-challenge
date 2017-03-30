@@ -16,7 +16,7 @@ header + div, header + section {
 }
 
 #map {
-    height: 700px;
+    height: 80vh;
 }
 
 .loading-overlay {

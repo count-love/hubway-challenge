@@ -3,16 +3,19 @@ var map;
 var hubway = {};
 var activeMarkers = {};
 var activeStatistic;
-var selectedStations = {};
 var clusters = {};
+var cachedDataSource;
+var cacheKey = '';
 
-// store the active set of selected filters
+// store the active set of selected filters;
+// by default, we start with the filters specified below (and a few default stations after the map loads)
 var selectedFilters = {
-    'year': {2016:true}, 
-    'month': {1:true,2:true,3:true,4:true,5:true,6:true,7:true,8:true,9:true,10:true,11:true,12:true},
-    'day': {0:true,1:true,2:true,3:true,4:true,5:true,6:true},
-    'hour': {0:true,1:true,2:true,3:true,4:true,5:true,6:true,7:true,8:true,9:true,10:true,11:true,12:true,13:true,14:true,15:true,16:true,17:true,18:true,19:true,20:true,21:true,22:true,23:true},
-    'member': {0:true,1:true}
+    'startYear': {}, 
+    'startMonth': {},
+    'startDay': {},
+    'startHour': {},
+    'member': {},
+    'stationStart': {}
 };
    
 var markerOptions = {
@@ -25,7 +28,10 @@ var markerOptions = {
     'stationUnselected': {'stroke': false, 'fillOpacity': 0.7, 'fillColor': 'blue'},
     'stationSelected': {'stroke': false, 'fillOpacity': 0.7, 'fillColor': 'red'},    
 };
-	   
+
+// The number of stations to show text results for
+var maxStations = 5;
+
 var defaultMarkerRadius = 100;
 var defaultStatisticRadius = 2000;
 var cssColors = ['blue','white','red','navy','gray','black','silver','maroon','purple','fuchsia','lime','olive','yellow','green','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
@@ -33,37 +39,37 @@ var cssColors = ['blue','white','red','navy','gray','black','silver','maroon','p
 // available filter options for queries
 var queryFilters = {
     'day': [
-        {'label': 'all', 'set': {'hour': null}},
-        {'label': 'early', 'tooltip': '2:00AM-5:00AM', 'set': {'hour': [2, 3, 4, 5]}},
-        {'label': 'morning', 'tooltip': '6:00AM-10:00AM', 'set': {'hour': [6, 7, 8, 9]}},
-        {'label': 'midday', 'tooltip': '10:00AM-2:00PM', 'set': {'hour': [10, 11, 12, 13]}},
-        {'label': 'afternoon', 'tooltip': '2:00PM-5:00PM', 'set': {'hour': [14, 15, 16]}},
-        {'label': 'evening', 'tooltip': '5:00PM-9:00PM', 'set': {'hour': [17, 18, 19, 20]}},
-        {'label': 'night', 'tooltip': '9:00PM-2:00AM', 'set': {'hour': [21, 22, 23, 0, 1]}},
+        {'label': 'all', 'set': {'startHour': null}},
+        {'label': 'early', 'tooltip': '2:00AM-5:00AM', 'set': {'startHour': [2, 3, 4, 5]}},
+        {'label': 'morning', 'tooltip': '6:00AM-10:00AM', 'set': {'startHour': [6, 7, 8, 9]}},
+        {'label': 'midday', 'tooltip': '10:00AM-2:00PM', 'set': {'startHour': [10, 11, 12, 13]}},
+        {'label': 'afternoon', 'tooltip': '2:00PM-5:00PM', 'set': {'startHour': [14, 15, 16]}},
+        {'label': 'evening', 'tooltip': '5:00PM-9:00PM', 'set': {'startHour': [17, 18, 19, 20]}},
+        {'label': 'night', 'tooltip': '9:00PM-2:00AM', 'set': {'startHour': [21, 22, 23, 0, 1]}},
     ],
     
     'week': [
-        {'label': 'all', 'set': {'day': null}},
-        {'label': 'weekday', 'tooltip': 'Monday-Friday', 'set': {'day': [0, 1, 2, 3, 4]}},
-        {'label': 'weekend', 'tooltip': 'Saturday, Sunday', 'set': {'day': [5, 6]}}
+        {'label': 'all', 'set': {'startDay': null}},
+        {'label': 'weekday', 'tooltip': 'Monday-Friday', 'set': {'startWeekday': [0, 1, 2, 3, 4]}},
+        {'label': 'weekend', 'tooltip': 'Saturday, Sunday', 'set': {'startWeekday': [5, 6]}}
     ],
     
     'season': [
-        {'label': 'all', 'set': {'month': null}},
-        {'label': 'spring', 'tooltip': 'March, April, May', 'set': {'month': [3, 4, 5]}},
-        {'label': 'summer', 'tooltip': 'June, July, August', 'set': {'month': [6, 7, 8]}},
-        {'label': 'fall', 'tooltip': 'September, October, November', 'set': {'month': [9, 10, 11]}},
-        {'label': 'winter', 'tooltip': 'December, January, February', 'set': {'month': [12, 1, 2]}}
+        {'label': 'all', 'set': {'startMonth': null}},
+        {'label': 'spring', 'tooltip': 'March, April, May', 'set': {'startMonth': [3, 4, 5]}},
+        {'label': 'summer', 'tooltip': 'June, July, August', 'set': {'startMonth': [6, 7, 8]}},
+        {'label': 'fall', 'tooltip': 'September, October, November', 'set': {'startMonth': [9, 10, 11]}},
+        {'label': 'winter', 'tooltip': 'December, January, February', 'set': {'startMonth': [12, 1, 2]}}
     ],
     
     'year': [
-        {'label': 'all', 'set': {'year': null}},
-        {'label': '2016', 'set': {'year': [2016]}},
-        {'label': '2015', 'set': {'year': [2015]}},
-        {'label': '2014', 'set': {'year': [2014]}},
-        {'label': '2013', 'set': {'year': [2013]}},
-        {'label': '2012', 'set': {'year': [2012]}},
-        {'label': '2011', 'set': {'year': [2011]}}
+        {'label': 'all', 'set': {'startYear': null}},
+        {'label': '2016', 'set': {'startYear': [2016]}},
+        {'label': '2015', 'set': {'startYear': [2015]}},
+        {'label': '2014', 'set': {'startYear': [2014]}},
+        {'label': '2013', 'set': {'startYear': [2013]}},
+        {'label': '2012', 'set': {'startYear': [2012]}},
+        {'label': '2011', 'set': {'startYear': [2011]}}
     ],
     
     'member': [
@@ -78,11 +84,55 @@ var stationGroups = [
     {'label': 'MIT', stops: [137, 138, 169, 170]}
 ];
 
+// create a hash of filters to use to run a DataSource query
+// valid fields: duration, gender, member, startMinute, startYear, startMonth, startWeekday, startHour, stationEnd, stationStart
+function updateCache(options) {
+
+    // generate key
+    var key = '';
+    options.forEach(function(filter) {
+        key += filter;
+
+        if (selectedFilters[filter] == null) { 
+            return; 
+
+        } else {
+            Object.keys(selectedFilters[filter]).forEach(function(unit) {
+                key += unit;
+            });
+        }
+    });
+        
+    if (key != cacheKey) {
+        console.log("Updating cache: %s", key);
+        cachedDataSource = DataSource.cacheFilter(getFilterOptions(options));    
+        cacheKey = key;
+    }
+}
+
+function getFilterOptions(options) {
+
+    var filter = {};
+    
+    options.forEach(function(column) {    
+        if (column == 'stationStart') {
+            filter['stationStart'] = Object.keys(selectedFilters['stationStart']).length == 0 ? null : Object.keys(selectedFilters['stationStart']);
+        } else if (column == 'member') {
+            alert('MEMBER NOT CURRENTLY SET UP!');
+        } else {
+            filter[column] = selectedFilters[column] == null ? null : Object.keys(selectedFilters[column]);
+        }
+    });
+
+    return filter;
+}
+
 // available queries to run/draw
 var illustrations = {
 
 	'trips': {
 	    unit: 'trips/day',
+	    unitRounding: 0,
 	    maxValue: 100,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
@@ -92,32 +142,77 @@ var illustrations = {
         },
 
   	    queryResults: function() { 
-
-  	        var results = DataSource.query(
-                { 
-                    startYear: selectedFilters['year'] === null ? null : Object.keys(selectedFilters['year']),
-                    startMonth: selectedFilters['month'] === null ? null : Object.keys(selectedFilters['month']),
-                    startWeekday: selectedFilters['day'] === null ? null : Object.keys(selectedFilters['day']),
-                    startHour: selectedFilters['hour'] === null ? null : Object.keys(selectedFilters['hour'])
-                },
-                "stationStart", null, "sum"
-            );
-
-            // just an approximation... (# months)*(4 weeks/month)*(days/week)
-            var totalNumberOfDays = Object.keys(selectedFilters['month']).length * 4 *
-               Object.keys(selectedFilters['day']).length;
             
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour']);
+  	        var results = DataSource.query(cachedDataSource, "stationStart", null, "sum");
+
+            // just an approximation... 
+            // 1. get the number of days of the week
+            // 2. multiply by the number of weeks in a month, and then the number of months (either all, or 4 for a season)
+            var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startDay'].length);
+            totalNumberOfDays = totalNumberOfDays * 4 * (selectedFilters['startMonth'] == null ? 12 : 4);
+                        
             Object.keys(results).forEach(function(station) {
                 results[station] /= totalNumberOfDays;
             });
             
             var description = '<div class="results_title">Number of trips started from each station</div>';
+
+            description += '<div class="results_group">Stations with the most trips:<br>';
+            description += printTopStations(results, true, maxStations, true);
+            description += '</div>';
+
+            description += '<div class="results_group">Stations with the fewest trips:<br>';
+            description += printTopStations(results, false, maxStations, true);
+            description += '</div>';
+            
             return {'trips': results, 'description': description};
         }
 	},
+	
+	'utilization': {
+	    unit: 'average fraction of bikes in use per hour',
+	    unitRounding: 0,
+	    maxValue: 100,
+	    useRawMarkerSize: false,
+	    markerOptions: markerOptions.data,
+  	    draw: function() {
+    	    removeMarkers();
+  	        showStationStatistic('utilization', ['utilization']);
+        },
+
+  	    queryResults: function() { 
+            
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour']);
+  	        var results = DataSource.query(cachedDataSource, "stationStart", null, "sum");
+
+            // just an approximation... 
+            // 1. get the number of days of the week
+            // 2. multiply by the number of weeks in a month, and then the number of months (either all, or 4 for a season)
+            var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startDay'].length);
+            totalNumberOfDays = totalNumberOfDays * 4 * (selectedFilters['startMonth'] == null ? 12 : 4);
+                        
+            Object.keys(results).forEach(function(station) {
+                results[station] /= totalNumberOfDays;
+            });
+            
+            var description = '<div class="results_title">Bike utilization rate for each station</div>';
+
+            description += '<div class="results_group">Stations with the most trips:<br>';
+            description += printTopStations(results, true, maxStations, true);
+            description += '</div>';
+
+            description += '<div class="results_group">Stations with the fewest trips:<br>';
+            description += printTopStations(results, false, maxStations, true);
+            description += '</div>';
+            
+            return {'utilization': results, 'description': description};
+        }
+	},	
 	    
 	'duration': {
 	    unit: 'minutes',
+	    unitRounding: 1,
 	    maxValue: 60,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
@@ -128,28 +223,32 @@ var illustrations = {
       	
   	    queryResults: function() { 
 
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour']);
+
   	        var results = DataSource.query(
-  	            // which results to include, can be null for all or a hash where keys are field 
-  	            // names and values are either a single value or an array of values
-  	            // valid fields: duration, gender, member, startMinute, startYear, startMonth, startWeekday, startHour, stationEnd, stationStart
-                { 
-                    startYear: selectedFilters['year'] === null ? null : Object.keys(selectedFilters['year']),
-                    startMonth: selectedFilters['month'] === null ? null : Object.keys(selectedFilters['month']),
-                    startWeekday: selectedFilters['day'] === null ? null : Object.keys(selectedFilters['day']),
-                    startHour: selectedFilters['hour'] === null ? null : Object.keys(selectedFilters['hour'])
-                },
+                cachedDataSource,
                 "stationStart", // what to group by (can be any field name), or null for no grouping
                 "duration",     // what to aggregate (can be any field name), or null to count results
                 "mean"          // how to aggregate (can be sum, min, max or mean)
             );
             
             var description = '<div class="results_title">Average duration of trips started at each station</div>';
+
+            description += '<div class="results_group">Stations with the longest average trip:<br>';
+            description += printTopStations(results, true, maxStations, true);
+            description += '</div>';
+
+            description += '<div class="results_group">Stations with the shortest average trip:<br>';
+            description += printTopStations(results, false, maxStations, true);
+            description += '</div>';
+            
             return {'duration': results, 'description': description};
         }
 	},
 
 	'distance': {
 	    unit: 'meters',
+	    unitRounding: 0,
 	    maxValue: 3000,
 	    useRawMarkerSize: true,
 	    markerOptions: markerOptions.distance,
@@ -160,42 +259,15 @@ var illustrations = {
         },
         
   	    queryResults: function() { 
+            
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
 
-            var min = DataSource.query(
-                { 
-                    startYear: selectedFilters['year'] === null ? null : Object.keys(selectedFilters['year']),
-                    startMonth: selectedFilters['month'] === null ? null : Object.keys(selectedFilters['month']),
-                    startWeekday: selectedFilters['day'] === null ? null : Object.keys(selectedFilters['day']),
-                    startHour: selectedFilters['hour'] === null ? null : Object.keys(selectedFilters['hour']),
-                    stationStart: Object.keys(selectedStations).length == 0 ? null : Object.keys(selectedStations)
-                },
-                "stationStart", "distance", "min"
-            ); 
-              	        
-            var mean = DataSource.query(
-                { 
-                    startYear: selectedFilters['year'] === null ? null : Object.keys(selectedFilters['year']),
-                    startMonth: selectedFilters['month'] === null ? null : Object.keys(selectedFilters['month']),
-                    startWeekday: selectedFilters['day'] === null ? null : Object.keys(selectedFilters['day']),
-                    startHour: selectedFilters['hour'] === null ? null : Object.keys(selectedFilters['hour']),
-                    stationStart: Object.keys(selectedStations).length == 0 ? null : Object.keys(selectedStations)
-                },
-                "stationStart", "distance", "mean"
-            );
-
-            var max = DataSource.query(
-                { 
-                    startYear: selectedFilters['year'] === null ? null : Object.keys(selectedFilters['year']),
-                    startMonth: selectedFilters['month'] === null ? null : Object.keys(selectedFilters['month']),
-                    startWeekday: selectedFilters['day'] === null ? null : Object.keys(selectedFilters['day']),
-                    startHour: selectedFilters['hour'] === null ? null : Object.keys(selectedFilters['hour']),
-                    stationStart: Object.keys(selectedStations).length == 0 ? null : Object.keys(selectedStations)
-                },
-                "stationStart", "distance", "max"
-            );
+            var min = DataSource.query(cachedDataSource, "stationStart", "distance", "min"); 
+            var mean = DataSource.query(cachedDataSource, "stationStart", "distance", "mean");
+            var max = DataSource.query(cachedDataSource, "stationStart", "distance", "max");
             
             var description = '<div class="results_title">Min/Mean/Max Distance Traveled</div>';
-            Object.keys(selectedStations).forEach(function(station) {
+            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
                 if (min[station] === undefined) { 
                     description += '<div class="results_group">' + 
                             hubway.stations[station].station + ": no rides during this period</div>";
@@ -215,6 +287,7 @@ var illustrations = {
 
     'destination': {
 	    unit: 'meters',
+	    unitRounding: 0,
 	    maxValue: 1,
 	    useRawMarkerSize: true,
 	    markerOptions: markerOptions.vector,
@@ -224,18 +297,12 @@ var illustrations = {
       	        showStationStatistic('destination', ['direction']);
         },
 
-  	    queryResults: function() { 
+  	    queryResults: function() {
 
-            var maxEndStations = 5;
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
 
             var results = DataSource.query(
-                { 
-                    startYear: selectedFilters['year'] === null ? null : Object.keys(selectedFilters['year']),
-                    startMonth: selectedFilters['month'] === null ? null : Object.keys(selectedFilters['month']),
-                    startWeekday: selectedFilters['day'] === null ? null : Object.keys(selectedFilters['day']),
-                    startHour: selectedFilters['hour'] === null ? null : Object.keys(selectedFilters['hour']),
-                    stationStart: Object.keys(selectedStations).length == 0 ? null : Object.keys(selectedStations)
-                },
+                cachedDataSource,
                 function(trip) { return trip & 0xffff; }, 
                 null,
                 null
@@ -263,27 +330,13 @@ var illustrations = {
    	                
             Object.keys(resultsByStation).forEach(function(station) {
                 
-                var keys = Object.keys(resultsByStation[station]);
+                var sortedKeys = sortStations(resultsByStation[station], true);
                 
-                var sortedKeys = keys.sort(function(a, b) {
-                    if (resultsByStation[station][a] < resultsByStation[station][b]) {
-                        return 1;
-                    } else if (resultsByStation[station][a] > resultsByStation[station][b]) {
-                        return -1;
-                    }
-                    
-                    return 0;
-                });
+                topStations[station] = sortedKeys.slice(0, maxStations);
                 
-                topStations[station] = sortedKeys.slice(0, maxEndStations);
-                
-                description += '<div class="results_group"><strong>From:</strong> ' + hubway.stations[station].station + '<br><ol>';
-                
-                topStations[station].forEach(function(station) {
-                    description += "<li>" + hubway.stations[station].station + "</li>";
-                });
-                
-                description += '</ol></div>';
+                description += '<div class="results_group"><strong>From:</strong> ' + hubway.stations[station].station + '<br>';
+                description += printTopStations(resultsByStation[station], true, maxStations, false);
+                description += '</div>';
             });
             
             return {'direction': topStations, 'description': description};
@@ -291,12 +344,57 @@ var illustrations = {
     }
 };
 
+// takes a hash of type {stationID: result} and returns a sorted list of station IDs
+// by default, this will return a descending list (from most to least)
+function sortStations(resultsByStation, descending) {
+
+    var keys = Object.keys(resultsByStation);
+    
+    var sortedKeys = keys.sort(function(a, b) {
+        if (resultsByStation[a] < resultsByStation[b]) {
+            return descending ? 1 : -1;
+        } else if (resultsByStation[a] > resultsByStation[b]) {
+            return descending ? -1 : 1;
+        }
+        return 0;
+    });
+    
+    return sortedKeys;
+}
+
+// print top results
+function printTopStations(resultsByStation, sortByDescending, max, printCounts) {
+
+    var sortedKeys = sortStations(resultsByStation, sortByDescending);
+    sortedKeys = sortedKeys.slice(0, max);
+
+    var description = '<ol>';
+
+    sortedKeys.forEach(function(station) {
+        description += "<li>" + hubway.stations[station].station;
+        
+        if (printCounts) {
+            description += ", " + 
+                Math.round(resultsByStation[station], illustrations[activeStatistic]['unitRounding']) + 
+                " " + illustrations[activeStatistic]['unit'];
+        }
+        
+        description += "</li>";
+    });
+
+    description += '</ol>';
+    
+    return description;
+}
+
+
+
 // add filter buttons
-function setupFilters() {
+function setupFilters(defaults) {
 
     Object.keys(queryFilters).forEach(function(group) {
         var newFilter = '<div class="filter"><div id="js_' + group + '"></div></div>';
-        $("#js_filters").append(newFilter);    
+        $("#js_filters").append(newFilter);
     });
 
     Object.keys(queryFilters).forEach(function(group) {
@@ -311,25 +409,24 @@ function setupFilters() {
                 filters += "<button class='btn btn-default js_" + group + "' id='" + id + "' title='" + tooltip + "'>" + label + "</button>";
             } else {
                 filters += "<button class='btn btn-default js_" + group + "' id='" + id + "'>" + label + "</button>";        
-            }
+            }            
         });
     
         // add buttons to the DOM
         $("#js_"+group).html(filters);
         $(".btn").tooltip();
     
-        // attach handlers
+        // attach event handlers
         queryFilters[group].forEach(function(button) {
     
             var label = button['label'];
             var id = "js_" + group + "_" + label;
             var filter = button['set'];
-                
+
             $("#"+id).on("click", function() {
                     
                 Object.keys(filter).forEach(function(a) {
-
-                    if (filter[a] === null) {
+                    if (filter[a] == null) {
                         selectedFilters[a] = null;
                     } else {  
                         selectedFilters[a] = {};
@@ -346,6 +443,14 @@ function setupFilters() {
                     illustrations[activeStatistic].draw();
                 }            
             });
+            
+            // make button active if it is the default
+            // and add its filter
+            if (id in defaults) {
+                $("#"+id).addClass("active");
+                $("#"+id).trigger("click");
+            }
+                        
         });
     });
 }
@@ -376,13 +481,13 @@ function showStations() {
         // add a reference to the original data
         hubway.stations[station_id]['marker'] = marker;                
                         
-        if (selectedStations[row.station_id]) {
-            selectedStations[row.station_id] = {'row': row, 'marker': marker};
+        if (selectedFilters['stationStart'][row.station_id]) {
+            selectedFilters['stationStart'][row.station_id] = {'row': row, 'marker': marker};
             marker.setStyle(markerOptions.stationSelected);        
         }
         
         marker.on('click', function (e) { 
-            if (!selectedStations[row.station_id]) {            
+            if (!selectedFilters['stationStart'][row.station_id]) {            
                 selectStation(row.station_id);
             } else {
                 removeStation(row.station_id);
@@ -397,7 +502,7 @@ function selectStation(stationID) {
 
     var marker = hubway.stations[stationID]['marker'];
                 
-    selectedStations[stationID] = {'row': hubway.stations[stationID], 'marker': marker};
+    selectedFilters['stationStart'][stationID] = {'row': hubway.stations[stationID], 'marker': marker};
     marker.setStyle(markerOptions.stationSelected);
 
     if (activeStatistic !== undefined) {
@@ -413,7 +518,7 @@ function removeStation(stationID) {
     var marker = hubway.stations[stationID]['marker'];
     marker.setStyle(markerOptions.stationUnselected);
 
-    delete selectedStations[stationID];
+    delete selectedFilters['stationStart'][stationID];
     
     if (activeStatistic !== undefined) {
         illustrations[activeStatistic].draw();
@@ -427,7 +532,7 @@ function displaySelectedStationsText() {
 
     var description = '<div class="results_title">Selected stations:</div><div class="results_group">';
     
-    Object.keys(selectedStations).forEach(function(station) {
+    Object.keys(selectedFilters['stationStart']).forEach(function(station) {
         description += hubway.stations[station].station + '<br>';
     });
     
@@ -647,7 +752,7 @@ jQuery(function($) {
                 $("#"+id).on("click", function() {
                                                 
                     // unselect all selected stations
-                    Object.keys(selectedStations).forEach(function(station) {
+                    Object.keys(selectedFilters['stationStart']).forEach(function(station) {
                         removeStation(station);
                     });                
     
@@ -676,12 +781,14 @@ jQuery(function($) {
 			console.log("ERROR:", err);
 		});	
 	
-	// attach button events
+	// draw station button
 	$("#js_stations").on("click", function() {
 	    removeMarkers();
-	    selectedStations = {};
+	    activeStatistic = undefined;
+	    selectedFilters['stationStart'] = {};
 	    showStations();
 	    $(".js_query").removeClass("active");	    
+	    $("#js_description").html('<div class="results_title">Bike Stations</div>');
 	});
 	
 	// lay out queries
@@ -689,19 +796,18 @@ jQuery(function($) {
 	    var button = '<button class="btn btn-default js_query" id="js_' + query + '">' + query + '</button>';
 	    $("#js_queries").append(button);
 	    $("#js_"+query).on("click", function() {
-       	    refreshQueryButtons(query);	        
+       	    refreshQueryButtons(query);
     	    activeStatistic = query;
 	        illustrations[query].draw();
 	    });
 	});
 	    
     // lay out filters
-    setupFilters();
-    
-    // defaults
-    $("#js_year_2016").addClass("active");
-    $("#js_season_all").addClass("active");
-    $("#js_week_all").addClass("active");
-    $("#js_day_all").addClass("active");
-    $("#js_member_all").addClass("active");
+    setupFilters({
+        'js_year_2016':true,
+        'js_season_all':true,
+        'js_week_all':true,
+        'js_day_all':true,
+        'js_member_all':true
+    });
 });
