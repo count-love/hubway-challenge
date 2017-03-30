@@ -34,13 +34,12 @@
 		AGGREGATORS: {
 			sum: {
 				ingest: function(v, u) {
-					if (isNaN(u)) return v;
-					return u + (v || 0);
+					return (u || 0) + (v || 0);
 				}
 			},
 			mean: {
 				ingest: function(v, u) {
-					if (isNaN(u)) return v;
+					if (Number.isNaN(u)) return v;
 					if (!v) {
 						return {count: 1, sum: u};
 					}
@@ -54,16 +53,12 @@
 			},
 			min: {
 				ingest: function(v, u) {
-					if (isNaN(u)) return v;
-					if ("undefined" === typeof v || u < v) return u;
-					return v;
+					return Math.min(v || Number.POSITIVE_INFINITY, u || Number.POSITIVE_INFINITY);
 				}
 			},
 			max: {
 				ingest: function(v, u) {
-					if (isNaN(u)) return v;
-					if ("undefined" === typeof v || u > v) return u;
-					return v;
+					return Math.max(v || Number.NEGATIVE_INFINITY, u || Number.NEGATIVE_INFINITY);
 				}
 			}
 		},
@@ -194,28 +189,50 @@
 			return ret;
 		},
 		query: function(filters, grouper, value, aggregator) {
-			var cbFilters = filters ? _compileFiltersToCb(filters) : null;
 			var cbGrouper = grouper ? _compileGrouperToCb(grouper) : function() { return 0; };
 			var cbValue = value ? _compileValueToCb(value) : function() { return 1; };
 			var cbAggregator = _compileAggregatorToCb(aggregator || "sum");
 			
-			
+			// variables for iterating
+			var i;
 			var group, val, ret = {};
 			
-			for (var i = 0; i < trips.length; ++i) {
-				// check filters
-				if (cbFilters && !cbFilters(trips[i])) {
-					continue;
+			// allow passing in a set of filters
+			if ($.isArray(filters)) {
+				// received array of prefiltered rows, just evaluate those rows
+				var t;
+				for (i = 0; i < filters.length; ++i) {
+					t = filters[i];
+				
+					// assemble group
+					group = cbGrouper(t);
+					
+					// get value
+					val = cbValue(t);
+					
+					// aggregate
+					ret[group] = cbAggregator.ingest(ret[group], val);
 				}
+			}
+			else {
+				// received set of filters, evaluate all rows
+				var cbFilters = filters ? _compileFiltersToCb(filters) : null;
 				
-				// assemble group
-				group = cbGrouper(trips[i]);
-				
-				// get value
-				val = cbValue(trips[i]);
-				
-				// aggregate
-				ret[group] = cbAggregator.ingest(ret[group], val);
+				for (i = 0; i < trips.length; ++i) {
+					// check filters
+					if (cbFilters && !cbFilters(trips[i])) {
+						continue;
+					}
+					
+					// assemble group
+					group = cbGrouper(trips[i]);
+					
+					// get value
+					val = cbValue(trips[i]);
+					
+					// aggregate
+					ret[group] = cbAggregator.ingest(ret[group], val);
+				}
 			}
 			
 			// finalize
@@ -230,6 +247,42 @@
 			// no grouper? return single value
 			if (!grouper) {
 				return ret[0];
+			}
+			
+			return ret;
+		},
+		cacheFilter: function(filters, threshold) {
+			// compile filters to callback
+			var cbFilters = filters ? _compileFiltersToCb(filters) : null;
+			
+			// include everything? nothing to cache
+			if (!cbFilters) {
+				return filters;
+			}
+			
+			// default threshold
+			if (typeof threshold === "undefined") {
+				threshold = 0.25;
+			}
+			
+			// when to check threshold
+			var check_threshold = Math.floor(trips.length / 4);
+			
+			// return
+			var ret = new Array();
+			
+			for (var i = 0; i < trips.length; ++i) {
+				// append it
+				if (cbFilters(trips[i])) {
+					ret.push(trips[i]);
+				}
+				
+				// abort if not efficient
+				if (i === check_threshold) {
+					if (ret.length > (threshold * check_threshold)) {
+						return filters;
+					}
+				}
 			}
 			
 			return ret;
@@ -304,10 +357,17 @@
 				var filters_cb = [];
 				for (var prop in filters) {
 					if (filters.hasOwnProperty(prop)) {
+						if (null === filters[prop]) continue; // null? no filter needed
 						filters_cb.push(_compileFilterToCb(prop, filters[prop]));
 					}
 				}
 				
+				// no filters
+				if (filters_cb.length === 0) {
+					return null;
+				}
+				
+				// single filter
 				if (filters_cb.length === 1) {
 					return filters_cb[0];
 				}
@@ -392,6 +452,13 @@
 				}
 				
 				throw "Unrecognized column for value: " + value;
+			
+			case "object":
+				if (value.initialize) {
+					value.initialize();
+				}
+				
+				return value.compute;
 			
 			default:
 				throw "Unrecognized type for value: " + typeof value;
