@@ -34,7 +34,8 @@ var maxStations = 5;
 
 var defaultMarkerRadius = 100;
 var defaultStatisticRadius = 2000;
-var cssColors = ['blue','white','red','navy','gray','black','silver','maroon','purple','fuchsia','lime','olive','yellow','green','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
+var cssColors = ['blue','red','navy','gray','black','silver','maroon','lime','olive','yellow','green','teal','aqua','antiquewhite','aquamarine','azure','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
+// 'purple','fuchsia', 'white'
 
 // available filter options for queries
 var queryFilters = {
@@ -84,6 +85,167 @@ var stationGroups = [
     {'label': 'MIT', stops: [137, 138, 169, 170]}
 ];
 
+//--- kMeans clustering code, inspired by
+// https://burakkanber.com/blog/machine-learning-k-means-clustering-in-javascript-part-1/
+var kMeans = {
+
+    // global variables
+    maxIterations: 10000,
+    dataExtremes: [],
+    dataRanges: [],
+
+    // given an array of multidimensional arrays, return the range for each dimension
+    updateDataRangesAndExtremes: function(data) {
+
+        this.ranges = [];
+        this.extremes = [];
+        
+        for (var dimension in data[0]) {        
+            var values = data.map(function(x) { return x[dimension]; });
+            var min = Math.min.apply(Math, values);
+            var max = Math.max.apply(Math, values);
+            
+            this.dataRanges[dimension] = max - min;
+            this.dataExtremes[dimension] = {'min': min, 'max': max};
+        }
+    },
+    
+    // generate initial means
+    generateInitialMeans: function(numberOfClusters) {
+       
+        var means = [];
+                
+        for (var k = 0; k < numberOfClusters; k++) {
+            means[k] = [];
+            
+            for (var dimension in this.dataExtremes) {
+                means[k][dimension] = 
+                    this.dataExtremes[dimension]['min'] + 
+                    (Math.random() * this.dataRanges[dimension]);
+            }
+        }
+
+        return means;
+    },
+    
+    // assign every data point to a mean
+    makeAssignments: function(data, means) {
+
+        var assignments = [];
+        
+        for (var i in data) {
+
+            var point = data[i];
+            var distances = [];
+
+            for (var j in means) {
+                var mean = means[j];
+                var sum = 0;
+
+                for (var dimension in point) {
+                    var difference = point[dimension] - mean[dimension];
+                    difference *= difference;
+                    sum += difference;
+                }
+
+                distances[j] = Math.sqrt(sum);
+            }
+
+            assignments[i] = distances.indexOf(Math.min.apply(Math, distances));
+        }
+        
+        return assignments;
+    },
+    
+    // modify means based on assignments
+    moveMeans: function(data, means, assignments) {
+
+        var sums = Array(means.length);
+        var counts = Array(means.length);
+        var moved = false;
+
+        for (var j in means) {
+            counts[j] = 0;
+            sums[j] = Array(means[j].length);
+            
+            for (var dimension in means[j]) {
+                sums[j][dimension] = 0;
+            }
+        }
+
+        // calculate the sum of every point for every dimension per mean
+        for (var point_index in assignments)
+        {
+            var mean_index = assignments[point_index];
+            var point = data[point_index];
+            var mean = means[mean_index];
+
+            counts[mean_index]++;
+
+            for (var dimension in mean) {
+                sums[mean_index][dimension] += point[dimension];
+            }
+        }
+
+        for (var mean_index in sums) {
+
+            // if a mean has no points, move it randomly       
+            if (counts[mean_index] === 0) {
+                sums[mean_index] = means[mean_index];
+
+                for (var dimension in this.dataExtremes) {
+                    sums[mean_index][dimension] = 
+                        this.dataExtremes[dimension]['min'] + 
+                        (Math.random() * this.dataRanges[dimension]);
+                }
+                
+                continue;
+            }
+
+            // otherwise, recenter the mean based on the points assigned to it
+            for (var dimension in sums[mean_index]) {
+                sums[mean_index][dimension] /= counts[mean_index];
+            }
+        }
+
+        // compare the new to old means and flag if different
+        if (means.toString() !== sums.toString()) {
+            moved = true;
+            means = sums;
+        }
+
+        return {'assignments': assignments, 'means': means, 'completed': !moved};
+    },
+    
+    run: function(data, numberOfClusters) {
+
+        this.updateDataRangesAndExtremes(data);
+        
+        // generate random centroids and initial assignments
+        var means = this.generateInitialMeans(numberOfClusters);
+        var assignments = this.makeAssignments(data, means);
+        
+        // iteratively cluster
+        var results = {};
+        for (var loopCounter = 0; loopCounter < this.maxIterations; loopCounter++) {
+            results = this.moveMeans(data, means, assignments);
+            
+            if (results['completed']) { 
+                console.log("KMeans completed in %s iterations", loopCounter);
+                break;
+                
+            } else {
+                console.log(results);            
+                means = results['means'];
+                assignments = results['assignments'];
+            }
+        }
+
+        return results;
+    }
+};
+
+
 // create a hash of filters to use to run a DataSource query
 // valid fields: duration, gender, member, startMinute, startYear, startMonth, startWeekday, startHour, stationEnd, stationStart
 function updateCache(options) {
@@ -130,7 +292,7 @@ function getFilterOptions(options) {
 // available queries to run/draw
 var illustrations = {
 
-	'trips': {
+	'starts': {
 	    unit: 'trips/day',
 	    unitRounding: 0,
 	    maxValue: 100,
@@ -138,7 +300,7 @@ var illustrations = {
 	    markerOptions: markerOptions.data,
   	    draw: function() {
     	    removeMarkers();
-  	        showStationStatistic('trips', ['trips']);
+  	        showStationStatistic('starts', ['trips']);
         },
 
   	    queryResults: function() { 
@@ -156,7 +318,58 @@ var illustrations = {
                 results[station] /= totalNumberOfDays;
             });
             
+            var stationsAsArray = Object.keys(results).map(function(station) { return station; });
+            var kMeansInput = stationsAsArray.map(function(station) { return [results[station]]; });
+            var kMeansResult = kMeans.run(kMeansInput, 10);
+            
+            var clusters = {};
+            for (var index in stationsAsArray) {
+                var stationID = stationsAsArray[index];
+                clusters[stationID] = kMeansResult['assignments'][index];
+            }
+            
             var description = '<div class="results_title">Number of trips started from each station</div>';
+
+            description += '<div class="results_group">Stations with the most trips:<br>';
+            description += printTopStations(results, true, maxStations, true);
+            description += '</div>';
+
+            description += '<div class="results_group">Stations with the fewest trips:<br>';
+            description += printTopStations(results, false, maxStations, true);
+            description += '</div>';
+            
+            return {'trips': results, 'description': description,
+                    'clusters': clusters, 'clusterMeans': kMeansResult['means']};
+        }
+	},
+	
+	'stops': {
+	    unit: 'trips/day',
+	    unitRounding: 0,
+	    maxValue: 100,
+	    useRawMarkerSize: false,
+	    markerOptions: markerOptions.data,
+  	    draw: function() {
+    	    removeMarkers();
+  	        showStationStatistic('stops', ['trips']);
+        },
+
+  	    queryResults: function() { 
+            
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour']);
+  	        var results = DataSource.query(cachedDataSource, "stationEnd", null, "sum");
+
+            // just an approximation... 
+            // 1. get the number of days of the week
+            // 2. multiply by the number of weeks in a month, and then the number of months (either all, or 4 for a season)
+            var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startDay'].length);
+            totalNumberOfDays = totalNumberOfDays * 4 * (selectedFilters['startMonth'] == null ? 12 : 4);
+                        
+            Object.keys(results).forEach(function(station) {
+                results[station] /= totalNumberOfDays;
+            });
+            
+            var description = '<div class="results_title">Number of trips ending at each station</div>';
 
             description += '<div class="results_group">Stations with the most trips:<br>';
             description += printTopStations(results, true, maxStations, true);
@@ -169,46 +382,6 @@ var illustrations = {
             return {'trips': results, 'description': description};
         }
 	},
-	
-	'utilization': {
-	    unit: 'average fraction of bikes in use per hour',
-	    unitRounding: 0,
-	    maxValue: 100,
-	    useRawMarkerSize: false,
-	    markerOptions: markerOptions.data,
-  	    draw: function() {
-    	    removeMarkers();
-  	        showStationStatistic('utilization', ['utilization']);
-        },
-
-  	    queryResults: function() { 
-            
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour']);
-  	        var results = DataSource.query(cachedDataSource, "stationStart", null, "sum");
-
-            // just an approximation... 
-            // 1. get the number of days of the week
-            // 2. multiply by the number of weeks in a month, and then the number of months (either all, or 4 for a season)
-            var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startDay'].length);
-            totalNumberOfDays = totalNumberOfDays * 4 * (selectedFilters['startMonth'] == null ? 12 : 4);
-                        
-            Object.keys(results).forEach(function(station) {
-                results[station] /= totalNumberOfDays;
-            });
-            
-            var description = '<div class="results_title">Bike utilization rate for each station</div>';
-
-            description += '<div class="results_group">Stations with the most trips:<br>';
-            description += printTopStations(results, true, maxStations, true);
-            description += '</div>';
-
-            description += '<div class="results_group">Stations with the fewest trips:<br>';
-            description += printTopStations(results, false, maxStations, true);
-            description += '</div>';
-            
-            return {'utilization': results, 'description': description};
-        }
-	},	
 	    
 	'duration': {
 	    unit: 'minutes',
@@ -285,8 +458,8 @@ var illustrations = {
         }	
 	},
 
-    'destination': {
-	    unit: 'meters',
+    'popular': {
+	    unit: 'trips',
 	    unitRounding: 0,
 	    maxValue: 1,
 	    useRawMarkerSize: true,
@@ -294,7 +467,7 @@ var illustrations = {
   	    draw: function() {
                 removeMarkers();
         	    showStations();
-      	        showStationStatistic('destination', ['direction']);
+      	        showStationStatistic('popular', ['direction']);
         },
 
   	    queryResults: function() {
@@ -326,7 +499,7 @@ var illustrations = {
                         
             var topStations = {};
             
-            var description = '<div class="results_title">Top destinations from selected start stations</div>';
+            var description = '<div class="results_title">Most frequent stops from selected start stations</div>';
    	                
             Object.keys(resultsByStation).forEach(function(station) {
                 
@@ -335,7 +508,7 @@ var illustrations = {
                 topStations[station] = sortedKeys.slice(0, maxStations);
                 
                 description += '<div class="results_group"><strong>From:</strong> ' + hubway.stations[station].station + '<br>';
-                description += printTopStations(resultsByStation[station], true, maxStations, false);
+                description += printTopStations(resultsByStation[station], true, maxStations, true);
                 description += '</div>';
             });
             
@@ -559,6 +732,25 @@ function showStationStatistic(forStatistic, properties) {
         }
 
         var queryResults = illustrations[forStatistic].queryResults();
+        
+        // if clustering data is available, assign colors sorted by the first dimension
+        if (queryResults['clusterMeans']) {
+
+            var means = queryResults['clusterMeans'].map(function(mean) { return mean[0] });
+            var meansSorted = means.sort(function(a, b) { 
+                if (a < b) {
+                    return -1;
+                } else if (a > b) {
+                    return 1;
+                }
+                
+                return 0;
+            });
+                        
+            meansSorted.forEach(function(x) { 
+                defineCluster(means.indexOf(x));
+            });
+        }
     
         properties.forEach(function(property) {
 
@@ -599,7 +791,8 @@ function showStationStatistic(forStatistic, properties) {
                         markerSize = maxValue ? markerSize * Math.sqrt(defaultStatisticRadius / maxValue) : 0;
                     }
 
-                    var cluster = properties.length == 1 ? "default" : property;
+                    var cluster = queryResults['clusters'] ? queryResults['clusters'][station_id] : "default";
+                    // properties.length == 1 ? "default" : property;
 
                     var marker = addMarker(
                         station.latitude, station.longitude, description, 
@@ -620,11 +813,15 @@ function showStationStatistic(forStatistic, properties) {
    }, 0);
 }
 
-function addMarker(latitude, longitude, description, kMeansLabel, radius, options) {
-   
+function defineCluster(kMeansLabel) {
     if (clusters[kMeansLabel] === undefined) {
         clusters[kMeansLabel] = Object.keys(clusters).length;
     }
+}
+
+function addMarker(latitude, longitude, description, kMeansLabel, radius, options) {
+   
+    defineCluster(kMeansLabel);
     
     var color = cssColors[clusters[kMeansLabel]];
     
