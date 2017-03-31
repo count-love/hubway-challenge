@@ -90,7 +90,7 @@ var stationGroups = [
 var kMeans = {
 
     // global variables
-    maxIterations: 10000,
+    maxIterations: 100,
     dataExtremes: [],
     dataRanges: [],
 
@@ -148,7 +148,8 @@ var kMeans = {
                     sum += difference;
                 }
 
-                distances[j] = Math.sqrt(sum);
+                distances[j] = sum;
+                // distances[j] = Math.sqrt(sum);
             }
 
             assignments[i] = distances.indexOf(Math.min.apply(Math, distances));
@@ -214,34 +215,78 @@ var kMeans = {
             means = sums;
         }
 
-        return {'assignments': assignments, 'means': means, 'completed': !moved};
+        return {'means': means, 'completed': !moved};
+    },
+    
+    getSolutionKey: function(assignments) {
+
+        var clusters = {};
+        var key = [];
+        
+        for (var stationIndex in assignments) {
+            var assignedCluster = assignments[stationIndex];
+            
+            if (clusters[assignedCluster] === undefined) {
+                clusters[assignedCluster] = Object.keys(clusters).length;
+            }
+            
+            key[stationIndex] = clusters[assignedCluster];
+        }
+        
+        return key.toString();
     },
     
     run: function(data, numberOfClusters) {
 
+        var solutionSets = {};
+
         this.updateDataRangesAndExtremes(data);
         
-        // generate random centroids and initial assignments
-        var means = this.generateInitialMeans(numberOfClusters);
-        var assignments = this.makeAssignments(data, means);
+        for (var solutionsCounter = 0; solutionsCounter < 20; solutionsCounter++) {
         
-        // iteratively cluster
-        var results = {};
-        for (var loopCounter = 0; loopCounter < this.maxIterations; loopCounter++) {
-            results = this.moveMeans(data, means, assignments);
-            
-            if (results['completed']) { 
-                console.log("KMeans completed in %s iterations", loopCounter);
-                break;
-                
-            } else {
-                console.log(results);            
-                means = results['means'];
-                assignments = results['assignments'];
-            }
-        }
+            // generate random centroids and initial assignments
+            var means = this.generateInitialMeans(numberOfClusters);
+                        
+            var assignments = this.makeAssignments(data, means);
+        
+            // iteratively cluster
+            for (var loopCounter = 0; loopCounter < this.maxIterations; loopCounter++) {
 
-        return results;
+                // calculate new means
+                var results = this.moveMeans(data, means, assignments);
+                means = results['means'];
+
+                // if the old and new mean were the same, then we finished
+                if (results['completed']) { 
+                               
+                    // get unique key for this grouping
+                    var key = this.getSolutionKey(assignments);
+                
+                    // save this solution
+                    if (!solutionSets[key]) {
+                        solutionSets[key] = {'assignments': assignments, 'means': means, 'count': 1};
+                    } else {
+                        solutionSets[key]['count']++;
+                    }
+
+                    break;
+                         
+                // if we didn't converge, update cluster assignments and then retry    
+                } else {
+                    assignments = this.makeAssignments(data, means);
+                }
+            }
+        }   
+     
+        // return the most popular solutions
+        var bestKey;
+        Object.keys(solutionSets).forEach(function(key) {
+            if (bestKey === undefined || solutionSets[bestKey]['count'] < solutionSets[key]['count']) {
+                bestKey = key;
+            }
+        });
+
+        return solutionSets[bestKey];
     }
 };
 
@@ -320,7 +365,7 @@ var illustrations = {
             
             var stationsAsArray = Object.keys(results).map(function(station) { return station; });
             var kMeansInput = stationsAsArray.map(function(station) { return [results[station]]; });
-            var kMeansResult = kMeans.run(kMeansInput, 10);
+            var kMeansResult = kMeans.run(kMeansInput, 5);
             
             var clusters = {};
             for (var index in stationsAsArray) {
@@ -337,7 +382,7 @@ var illustrations = {
             description += '<div class="results_group">Stations with the fewest trips:<br>';
             description += printTopStations(results, false, maxStations, true);
             description += '</div>';
-            
+
             return {'trips': results, 'description': description,
                     'clusters': clusters, 'clusterMeans': kMeansResult['means']};
         }
@@ -736,8 +781,15 @@ function showStationStatistic(forStatistic, properties) {
         // if clustering data is available, assign colors sorted by the first dimension
         if (queryResults['clusterMeans']) {
 
-            var means = queryResults['clusterMeans'].map(function(mean) { return mean[0] });
-            var meansSorted = means.sort(function(a, b) { 
+            var means = [];
+            var meansSorted = [];
+            
+            queryResults['clusterMeans'].forEach(function(mean) { 
+                means.push(mean[0]);
+                meansSorted.push(mean[0]);
+            });
+                        
+            meansSorted.sort(function(a, b) { 
                 if (a < b) {
                     return -1;
                 } else if (a > b) {
@@ -746,8 +798,9 @@ function showStationStatistic(forStatistic, properties) {
                 
                 return 0;
             });
-                        
-            meansSorted.forEach(function(x) { 
+            
+            meansSorted.forEach(function(x) {
+                var index = means.indexOf(x);
                 defineCluster(means.indexOf(x));
             });
         }
