@@ -184,7 +184,7 @@
 		stationsByID: function() {
 			var ret = {};
 			for (var i = 0; i < stations.length; ++i) {
-				ret[stations[i].station_id] = $.extend({}, stations[i]);
+				ret[stations[i].id] = $.extend({}, stations[i]);
 			}
 			return ret;
 		},
