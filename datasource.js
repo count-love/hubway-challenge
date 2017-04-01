@@ -491,13 +491,13 @@
 		// allocate distances array
 		distances = new Array(256 * 256);
 		for (i = 0; i < (stations.length - 1); ++i) {
-			i_id = stations[i].station_id;
+			i_id = stations[i].id;
 			
 			// set zero down diagonal
 			distances[i_id << 8 | i_id] = 0;
 			
 			for (j = i + 1; j < stations.length; ++j) {
-				j_id = stations[j].station_id;
+				j_id = stations[j].id;
 				
 				dist = _calculateDistance(stations[i].longitude, stations[i].latitude, stations[j].longitude, stations[j].latitude);
 				
@@ -532,13 +532,13 @@
 		// allocate angles array
 		angles = new Array(256 * 256);
 		for (i = 0; i < (stations.length - 1); ++i) {
-			i_id = stations[i].station_id;
+			i_id = stations[i].id;
 			
 			// set NaN down diagonal
 			angles[i_id << 8 | i_id] = NaN;
 			
 			for (j = i + 1; j < stations.length; ++j) {
-				j_id = stations[j].station_id;
+				j_id = stations[j].id;
 				
 				delta_x = stations[i].longitude - stations[j].longitude;
 				delta_y = stations[i].latitude - stations[j].latitude;
