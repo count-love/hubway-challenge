@@ -36,7 +36,23 @@
 						<label><input type="checkbox" value="mbta_commuter" checked> Commuter Line</label>
 					</div>
 				</div>
+				
+				<div id="bike-speed">
+					<p><strong>Bike Speed</strong> Time between bike stations is estimated based on Hubways data, but you can fine tune which data to use.</p>
+					<div class="radio">
+						<label><input type="radio" name="bikespeed" value="0" checked> Average Hubway member (~8.6 miles per hour)</label>
+					</div>
+					<div class="radio">
+						<label><input type="radio" name="bikespeed" value="1"> Average Hubway casual user (~6.8 miles per hour)</label>
+					</div>
+					<div class="radio">
+						<label><input type="radio" name="bikespeed" value="2"> Google estimated bike time (~9.4 miles per hour)</label>
+					</div>
+				</div>
 			</form>
+			
+			<svg id="legend">
+			</svg>
 		</div>
 		<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCbuQ-55QIXPuJRvcNGIvTpEwL_qDdJsMo"></script>
 	</body>

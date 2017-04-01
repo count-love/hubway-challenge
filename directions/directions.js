@@ -31,7 +31,7 @@ jQuery(function($) {
 		router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
 		
 		// add modes
-		router.addMode(new ModeLookup("bike", received_data.bike, 60, 1));
+		router.addMode(new ModeMultiLookup("bike", received_data.bike, 0, 60, 1));
 		router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 90, 2));
 		router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 90, 2));
 		router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 120, 2));
@@ -105,8 +105,15 @@ jQuery(function($) {
 	
 	$("#transit-modes").on("click", ":checkbox", function() {
 		if (router) {
+			var cur_mode = this.value, enabled = !!$(this).prop("checked");
+			
 			// router...
-			router.getModeByName(this.value).enabled = !!$(this).prop("checked");
+			router.getModeByName(this.value).enabled = enabled;
+			
+			// toggle bike speed options
+			if ("bike" === cur_mode) {
+				$("#bike-speed")[enabled ? "show" : "hide"]("fast");
+			}
 			
 			// refresh
 			refresh();
@@ -130,6 +137,14 @@ jQuery(function($) {
 		mode = new_mode;
 		
 		if (router) {
+			refresh();
+		}
+	});
+	
+	$("#bike-speed").on("click", ":radio", function() {
+		if (router) {
+			router.getModeByName("bike").setIndex(parseInt(this.value, 10));
+			
 			refresh();
 		}
 	});
@@ -192,9 +207,10 @@ jQuery(function($) {
 			var rng = d3.extent(result, function(a) { return a[0]; });
 			
 			// make scale
-			var scale = d3.scaleLinear().domain([0, 900, 1800])
+			var scale = d3.scaleLinear().domain([0, 1800, 3600])
 				.range(["#4575b4", "#ffffbf", "#a50026"])
-				.interpolate(d3.interpolateHcl);
+				.interpolate(d3.interpolateHcl)
+				.clamp(true);
 			
 			// redraw map
 			map.data.setStyle(function(cell) {
@@ -278,6 +294,62 @@ jQuery(function($) {
 	
 	// route from... just look up in table
 	ModeLookup.prototype.routesFrom = function(rtr, cur) {
+		// not in the data
+		if (!(cur in this.data)) {
+			return [];
+		}
+		
+		return this.data[cur];
+	}
+	
+	function ModeMultiLookup(name, transit_data, index, penalty, flag) {
+		// call parent
+		Mode.call(this, name, penalty || 0, flag || 0);
+		
+		// store index
+		this.index = index || 0;
+		
+		// store raw
+		this.raw = transit_data.slice();
+		
+		// cache lookup data
+		this.data = {};
+		for (var i = 0; i < transit_data.length; ++i) {
+			if (!(transit_data[i][0] in this.data)) {
+				this.data[transit_data[i][0]] = new Array();
+			}
+			
+			// append it
+			this.data[transit_data[i][0]].push([transit_data[i][1], transit_data[i][2 + index]]);
+		}
+	}
+	ModeMultiLookup.prototype = Object.create(Mode.prototype);
+	ModeMultiLookup.prototype.constructor = ModeMultiLookup;
+	
+	// route from... just look up in table
+	ModeMultiLookup.prototype.setIndex = function(index) {
+		// store index
+		this.index = index;
+		
+		// cache lookup data
+		this.data = {};
+		for (var i = 0; i < this.raw.length; ++i) {
+			// null? skip value
+			if (null === this.raw[i][2 + index]) {
+				continue;
+			}
+			
+			if (!(this.raw[i][0] in this.data)) {
+				this.data[this.raw[i][0]] = new Array();
+			}
+			
+			// append it
+			this.data[this.raw[i][0]].push([this.raw[i][1], this.raw[i][2 + index]]);
+		}
+	}
+	
+	// route from... just look up in table
+	ModeMultiLookup.prototype.routesFrom = function(rtr, cur) {
 		// not in the data
 		if (!(cur in this.data)) {
 			return [];
