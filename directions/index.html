@@ -14,7 +14,14 @@
 			<h1>Navigating Boston</h1>
 			
 			<form>
-				<div id="modes">
+				<div id="map-mode">
+					<div class="btn-group" role="group" aria-label="Mode to display on the map.">
+						<button type="button" class="btn btn-default active" data-mode="mode">Fastest Transit</button>
+						<button type="button" class="btn btn-default" data-mode="time">Travel Time</button>
+					</div>
+				</div>
+				
+				<div id="transit-modes">
 					<strong>Include Transit Modes</strong>
 					<div class="checkbox">
 						<label><input type="checkbox" value="bike" checked> Hubway</label>

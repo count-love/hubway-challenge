@@ -16,7 +16,7 @@ jQuery(function($) {
 	var map;
 	
 	// disable fields
-	var disabled = $("input").not(":disabled").prop("disabled", true);
+	var disabled = $("input, button").not(":disabled").prop("disabled", true);
 	
 	// load data
 	$.ajax({
@@ -103,12 +103,33 @@ jQuery(function($) {
 		google.maps.event.trigger(map, "resize");
 	})
 	
-	$("#modes").on("click", ":checkbox", function() {
+	$("#transit-modes").on("click", ":checkbox", function() {
 		if (router) {
 			// router...
 			router.getModeByName(this.value).enabled = !!$(this).prop("checked");
 			
 			// refresh
+			refresh();
+		}
+	});
+	
+	$("#map-mode").on("click", "[data-mode]", function() {
+		var $this = $(this), new_mode = $this.data("mode");
+		
+		// no change
+		if (mode === new_mode) {
+			return;
+		}
+		
+		// update interface
+		// slight browser optimization?
+		$(".active").filter("[data-mode]").removeClass("active");
+		$this.addClass("active");
+		
+		// set mode
+		mode = new_mode;
+		
+		if (router) {
 			refresh();
 		}
 	});
@@ -169,13 +190,11 @@ jQuery(function($) {
 		if ("time" === mode) {
 			// calculate rng
 			var rng = d3.extent(result, function(a) { return a[0]; });
-			console.log(rng);
 			
 			// make scale
-			var scale = d3.scaleLinear().domain([rng[0], (rng[0] + rng[1]) / 2, rng[1]])
+			var scale = d3.scaleLinear().domain([0, 900, 1800])
 				.range(["#4575b4", "#ffffbf", "#a50026"])
 				.interpolate(d3.interpolateHcl);
-			
 			
 			// redraw map
 			map.data.setStyle(function(cell) {
