@@ -188,6 +188,31 @@
 			}
 			return ret;
 		},
+		select: function(filters) {
+			// cached filter set? just return array
+			if ($.isArray(filters)) {
+				return filters.slice();
+			}
+			
+			// received set of filters, evaluate all rows
+			var cbFilters = filters ? _compileFiltersToCb(filters) : null;
+			
+			// return all raw data (could be expensive memory wise)
+			if (null === cbFilters) {
+				return trips.slice();
+			}
+			
+			// array of matching entries
+			var ret = new Array();
+			for (var i = 0; i < trips.length; ++i) {
+				// append it
+				if (cbFilters(trips[i])) {
+					ret.push(trips[i]);
+				}
+			}
+			
+			return ret;
+		},
 		query: function(filters, grouper, value, aggregator) {
 			var cbGrouper = grouper ? _compileGrouperToCb(grouper) : function() { return 0; };
 			var cbValue = value ? _compileValueToCb(value) : function() { return 1; };
