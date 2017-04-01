@@ -31,11 +31,11 @@ jQuery(function($) {
 		router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
 		
 		// add modes
-		router.addMode(new ModeLookup("bike", received_data.bike, 120, 1));
-		router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 600, 2));
-		router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 450, 2));
-		router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 1800, 2));
-		//router.addMode(new ModeLookup("mbta_ferry", received_data.mbta_ferry, 600, 2));
+		router.addMode(new ModeLookup("bike", received_data.bike, 60, 1));
+		router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 90, 2));
+		router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 90, 2));
+		router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 120, 2));
+		//router.addMode(new ModeLookup("mbta_ferry", received_data.mbta_ferry, 120, 2));
 		router.addMode(new ModeWalk());
 		
 		// debug
