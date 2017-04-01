@@ -2,16 +2,35 @@
 <html>
 	<head>
 		<title>Transit Choices</title>
+		<link rel="stylesheet" href="../external/bootstrap/3.3.7/bootstrap.css" type="text/css">
+		<link rel="stylesheet" href="directions.css" type="text/css">
 		<script src="../external/jquery/2.1.1/jquery.js"></script>
 		<script src="../external/d3/4.6.0/d3.js"></script>
 		<script src="directions.js"></script>
-		<style>
-			#map { height: 100%; }
-			html, body { height: 100%; margin: 0; padding: 0; }
-		</style>
 	</head>
 	<body>
 		<div id="map"></div>
+		<div id="sidebar">
+			<h1>Navigating Boston</h1>
+			
+			<form>
+				<div id="modes">
+					<strong>Include Transit Modes</strong>
+					<div class="checkbox">
+						<label><input type="checkbox" value="bike" checked> Hubway</label>
+					</div>
+					<div class="checkbox">
+						<label><input type="checkbox" value="mbta_subway" checked> Subway</label>
+					</div>
+					<div class="checkbox">
+						<label><input type="checkbox" value="mbta_bus" checked> Bus</label>
+					</div>
+					<div class="checkbox">
+						<label><input type="checkbox" value="mbta_commuter" checked> Commuter Line</label>
+					</div>
+				</div>
+			</form>
+		</div>
 		<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCbuQ-55QIXPuJRvcNGIvTpEwL_qDdJsMo"></script>
 	</body>
 </html>

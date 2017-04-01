@@ -1,0 +1,47 @@
+html, body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	background-color: #c9c9c9;
+}
+
+#map {
+	width: 70%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+#sidebar {
+	width: 30%;
+	position: absolute;
+	top: 0;
+	right: 0;
+	height: 100%;
+	background-color: #fff;
+	border-left: 1px solid black;
+	padding: 10px;
+}
+
+#sidebar h1 {
+	margin-top: 0;
+	font-size: 24px
+}
+
+/* extra large screens */
+@media screen and (min-width: 1200px) {
+	#map {
+		width: auto;
+		right: 360px;
+	}
+	#sidebar {
+		width: 360px;
+	}
+}
+
+/* mobile */
+@media screen and (max-width: 979px) {
+	
+	
+}

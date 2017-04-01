@@ -8,11 +8,15 @@ jQuery(function($) {
 	var grid;
 	
 	// current result (for redrawing)
+	var start;
 	var result = false;
 	var mode = "mode"; // mode or time
 	
 	// google maps object
 	var map;
+	
+	// disable fields
+	var disabled = $("input").not(":disabled").prop("disabled", true);
 	
 	// load data
 	$.ajax({
@@ -28,7 +32,10 @@ jQuery(function($) {
 		
 		// add modes
 		router.addMode(new ModeLookup("bike", received_data.bike, 120, 1));
-		router.addMode(new ModeLookup("mbta", received_data.mbta, 600, 2));
+		router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 600, 2));
+		router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 450, 2));
+		router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 1800, 2));
+		//router.addMode(new ModeLookup("mbta_ferry", received_data.mbta_ferry, 600, 2));
 		router.addMode(new ModeWalk());
 		
 		// debug
@@ -37,6 +44,9 @@ jQuery(function($) {
 		
 		// setup map
 		setupMap();
+		
+		// enable interface
+		disabled.prop("disabled", false);
 	}).fail(function() {
 		// TODO: write data handling
 	});
@@ -72,6 +82,9 @@ jQuery(function($) {
 			// get latitude and longitude
 			var lat = lm.latLng.lat(), lng = lm.latLng.lng();
 			
+			// store current starting longitude and latitude
+			start = [lat, lng];
+			
 			// build best mode overlay
 			buildOverlay(lat, lng);
 		});
@@ -83,6 +96,27 @@ jQuery(function($) {
 		// add bike layer
 		//var bikeLayer = new google.maps.BicyclingLayer();
 		//bikeLayer.setMap(map);
+	}
+	
+	// add event handlers
+	$(window).on("resize", function() {
+		google.maps.event.trigger(map, "resize");
+	})
+	
+	$("#modes").on("click", ":checkbox", function() {
+		if (router) {
+			// router...
+			router.getModeByName(this.value).enabled = !!$(this).prop("checked");
+			
+			// refresh
+			refresh();
+		}
+	});
+	
+	function refresh() {
+		if (start) {
+			buildOverlay(start[0], start[1]);
+		}
 	}
 	
 	function clearOverlay() {
@@ -315,7 +349,7 @@ jQuery(function($) {
 	}
 	
 	Router.prototype.getModeByName = function(name) {
-		for (var i = 0; i < this.modes; ++i) {
+		for (var i = 0; i < this.modes.length; ++i) {
 			if (this.modes[i].name === name) {
 				return this.modes[i];
 			}
@@ -390,6 +424,9 @@ jQuery(function($) {
 			mode = came_from[cur][1];
 			
 			for (j = 0; j < this.modes.length; ++j) {
+				// skip
+				if (!this.modes[j].enabled) continue;
+				
 				potential = this.modes[j].routesFrom(this, cur);
 				for (i = 0; i < potential.length; ++i) {
 					nxt = potential[i][0];
