@@ -8,12 +8,14 @@ jQuery(function($) {
 	var grid;
 	
 	// current result (for redrawing)
-	var start;
+	var start, stop;
 	var result = false;
 	var mode = "mode"; // mode or time
 	
 	// google maps object
 	var map;
+	var directionsService = null; // = new google.maps.DirectionsService();
+	var directionsRenderer = [];
 	
 	// disable fields
 	var disabled = $("input, button").not(":disabled").prop("disabled", true);
@@ -81,6 +83,33 @@ jQuery(function($) {
 		map.addListener("click", function(lm) {
 			// get latitude and longitude
 			var lat = lm.latLng.lat(), lng = lm.latLng.lng();
+			
+			// has direction services?
+			if (directionsService) {
+				// has stop?
+				if (stop) {
+					// clear the map
+					start = null;
+					stop = null;
+					result = false;
+					
+					// clear the overlay
+					clearOverlay();
+					
+					return;
+				}
+				
+				// has start?
+				if (start) {
+					// store top point
+					stop = [lat, lng];
+					
+					// build directions
+					buildDirections(start[0], start[1], lat, lng);
+					
+					return;
+				}
+			}
 			
 			// store current starting longitude and latitude
 			start = [lat, lng];
@@ -157,6 +186,11 @@ jQuery(function($) {
 	
 	function clearOverlay() {
 		map.data.setStyle({clickable: false, visible: false});
+		
+		for (var i = 0; i < directionsRenderer.length; ++i) {
+			directionsRenderer[i].setMap(null);
+		}
+		directionsRenderer.length = 0; // clear array
 	}
 	
 	function buildOverlay(start_lat, start_lng) {
@@ -238,6 +272,70 @@ jQuery(function($) {
 					return {fillColor: 'red', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
 				case 3:
 					return {fillColor: 'orange', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
+			}
+		});
+	}
+	
+	function buildDirections(start_lat, start_lng, stop_lat, stop_lng) {
+		// get start grid coordinate
+		var start_gc = grid.coordinateToGridIndex(start_lat, start_lng);
+		var stop_gc = grid.coordinateToGridIndex(stop_lat, stop_lng);
+		
+		// nothing to do
+		if (!result || -1 === start_gc || -1 === stop_gc || start_gc === stop_gc) {
+			return;
+		}
+		
+		// clear overlay first
+		clearOverlay();
+		
+		// send directly to google or piece together?
+		var mode;
+		switch (result[stop_gc][1]) {
+			case 0:
+				fetchDirectionsLeg({lat: start_lat, lng: start_lng}, {lat: stop_lat, lng: stop_lng}, google.maps.TravelMode.WALKING);
+				break;
+			case 1:
+				// piece together
+				break;
+			case 2:
+				fetchDirectionsLeg({lat: start_lat, lng: start_lng}, {lat: stop_lat, lng: stop_lng}, google.maps.TravelMode.TRANSIT);
+				break;
+			case 3:
+				// piece together
+				break;
+			default:
+				return; // nothing to do
+		}
+	}
+	
+	function fetchDirectionsLeg(start, stop, mode) {
+		var request = {
+			origin: new google.maps.LatLng(start.lat, start.lng),
+			destination: new google.maps.LatLng(stop.lat, stop.lng),
+			travelMode: mode,
+			provideRouteAlternatives: false
+		};
+		
+		directionsService.route(request, function(result, status) {
+			if ("OK" === status) {
+				// create a renderer
+				var display = new google.maps.DirectionsRenderer({
+					draggable: false,
+					hideRouteList: true,
+					preserveViewport: true,
+					suppressMarkers: true
+				});
+				display.setMap(map);
+				
+				// set the directions
+				display.setDirections(result);
+				
+				// store it
+				directionsRenderer.push(display);
+			}
+			else {
+				// TODO: display error?
 			}
 		});
 	}
