@@ -28,8 +28,23 @@ jQuery(function($) {
 				return;
 			}
 
+			// received data
+			var grid = new Grid(received_data.grid);
+
+			// setup router
+			var router = new Router(grid);
+			router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
+
+			// add modes
+			router.addMode(new ModeMultiLookup("bike", received_data.bike, 0, 60, 1));
+			router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 90, 2));
+			router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 90, 2));
+			router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 120, 2));
+			//router.addMode(new ModeLookup("mbta_ferry", received_data.mbta_ferry, 120, 2));
+			router.addMode(new ModeWalk());
+
 			// add grid
-			layer = L.transitLayer(received_data);
+			layer = L.transitLayer(router);
 			layer.addTo(map);
 
 			// resolve
@@ -141,26 +156,14 @@ jQuery(function($) {
 			opacityMode: 0.3,
 			opacityTime: 0.6
 		},
-		initialize: function(data, options) {
+		initialize: function(router, options) {
 			// private properties
 			this._start = null;
 			this._result = false;
 			this._scale = null;
 			this._mode = L.TransitLayer.MODE_MODE;
-			this._grid = new Grid(data.grid);
-			this._router = new Router(this._grid);
-
-			// setup router
-			this._router.excludeCoordinatesAndWater(data.exclude, data.water, 0.3);
-
-			// add modes
-			// TODO: potentially generalize mode configuration to allow modes to be defined in the JSON
-			this._router.addMode(new ModeMultiLookup("bike", data.bike, 0, 60, 1));
-			this._router.addMode(new ModeLookup("mbta_bus", data.mbta_bus, 90, 2));
-			this._router.addMode(new ModeLookup("mbta_subway", data.mbta_subway, 90, 2));
-			this._router.addMode(new ModeLookup("mbta_commuter", data.mbta_commuter, 120, 2));
-			//this._router.addMode(new ModeLookup("mbta_ferry", data.mbta_ferry, 120, 2));
-			this._router.addMode(new ModeWalk());
+			this._grid = router.grid;
+			this._router = router;
 
 			// set options
 			L.setOptions(this, options);
