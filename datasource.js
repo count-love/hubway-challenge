@@ -155,25 +155,6 @@
 			
 			return $.when(dfd_trips, dfd_stations);
 		},
-		debugLogSampleData: function(num) {
-			for (var i = 0; i < (num||10); ++i) {
-				var j = Math.floor(Math.random() * trips.length);
-				console.log(i, j);
-				console.log(trips[j]);
-				console.log("stationStart", this.FIELDS.stationStart(trips[j]));
-				console.log("stationEnd", this.FIELDS.stationEnd(trips[j]));
-				console.log("startYear", this.FIELDS.startYear(trips[j]));
-				console.log("startMonth", this.FIELDS.startMonth(trips[j]));
-				console.log("startWeekday", this.FIELDS.startWeekday(trips[j]));
-				console.log("startHour", this.FIELDS.startHour(trips[j]));
-				console.log("startMinute", this.FIELDS.startMinute(trips[j]));
-				console.log("duration", this.FIELDS.duration(trips[j]));
-				console.log("gender", this.FIELDS.gender(trips[j]));
-				console.log("member", this.FIELDS.member(trips[j]));
-			}
-			
-			console.log(this.query({startYear: [2011, 2012], startMonth: 6}, "startMonth", null, "sum"));
-		},
 		stations: function() {
 			var ret = [];
 			for (var i = 0; i < stations.length; ++i) {
@@ -203,7 +184,7 @@
 			}
 			
 			// array of matching entries
-			var ret = new Array();
+			var ret = [];
 			for (var i = 0; i < trips.length; ++i) {
 				// append it
 				if (cbFilters(trips[i])) {
@@ -294,7 +275,7 @@
 			var check_threshold = Math.floor(trips.length / 4);
 			
 			// return
-			var ret = new Array();
+			var ret = [];
 			
 			for (var i = 0; i < trips.length; ++i) {
 				// append it
