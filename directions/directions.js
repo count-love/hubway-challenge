@@ -202,6 +202,8 @@ jQuery(function($) {
 	}
 			
 	// make scale
+	// #4575b4 #ffffbf #a50026
+	// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
 	var scale = d3.scaleLinear().domain([0, 1800, 3600])
 		.range(["#4575b4", "#ffffbf", "#a50026"])
 		.interpolate(d3.interpolateHcl)
@@ -209,10 +211,10 @@ jQuery(function($) {
 	
 	var CellStyles = {
 		NONE: {stroke: false, fill: false, interactive: false},
-		WALK: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'blue', interactive: false},
-		BIKE: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'green', interactive: false},
-		MBTA: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'red', interactive: false},
-		MIX: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'orange', interactive: false}
+		WALK: {stroke: false, fill: true, fillOpacity: 0.4, fillColor: 'blue', interactive: false},
+		BIKE: {stroke: false, fill: true, fillOpacity: 0.4, fillColor: 'green', interactive: false},
+		MBTA: {stroke: false, fill: true, fillOpacity: 0.4, fillColor: 'red', interactive: false},
+		MIX: {stroke: false, fill: true, fillOpacity: 0.4, fillColor: 'orange', interactive: false}
 	};
 	
 	function _styleCell(feature) {
@@ -230,7 +232,7 @@ jQuery(function($) {
 			}
 			
 			// color code
-			return {stroke: false, fill: true, fillOpacity: 0.5, fillColor: scale(tm), interactive: false};
+			return {stroke: false, fill: true, fillOpacity: 0.6, fillColor: scale(tm), interactive: false};
 		}
 		
 		switch (result[gc][1]) {
