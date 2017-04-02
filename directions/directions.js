@@ -8,7 +8,7 @@ jQuery(function($) {
 	var grid;
 	
 	// current result (for redrawing)
-	var start, stop;
+	var start;
 	var result = false;
 	var mode = "mode"; // mode or time
 	
@@ -72,18 +72,14 @@ jQuery(function($) {
 			minZoom: 3,
 			maxZoom: 15
 		}).addTo(map);
-	
-		// Tangram layer - requires tangram inclusion
-		//Tangram.leafletLayer({
-		//	scene: "directions.yaml",
-		//	attribution: '<a href="https://mapzen.com/tangram" target="_blank">Tangram</a> by <a href="https://mapzen.com/" target="_blank">Mapzen</a> | &copy; OSM contributors'
-		//}).addTo(map);
 		
 		// fit bounds
-		map.fitBounds([
+		var inside = false;
+		var zoom = map.getBoundsZoom([
 			[grid.north, grid.west],
 			[grid.south, grid.east]
-		]);
+		], inside);
+		map.setView([(grid.north + grid.south) / 2, (grid.east + grid.west) / 2], zoom);
 		
 		// listen for click
 		map.on("click", function(ev) {
@@ -107,7 +103,7 @@ jQuery(function($) {
 	// add event handlers
 	$(window).on("resize", function() {
 		map.invalidateSize();
-	})
+	});
 	
 	$("#transit-modes").on("click", ":checkbox", function() {
 		if (router) {
@@ -216,7 +212,7 @@ jQuery(function($) {
 		WALK: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'blue', interactive: false},
 		BIKE: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'green', interactive: false},
 		MBTA: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'red', interactive: false},
-		MIX: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'orange', interactive: false},
+		MIX: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'orange', interactive: false}
 	};
 	
 	function _styleCell(feature) {
@@ -251,31 +247,12 @@ jQuery(function($) {
 		}
 	}
 	
-	function deg2rad(deg) {
-		return deg * Math.PI / 180;
-	}
-	
-	function calculateDistanceInMeters(a_long, a_lat, b_long, b_lat) {
-		// radius of earth in m
-		var r = 6378137;
-		
-		// convert to radians
-		var a_long_rad = deg2rad(a_long);
-		var a_lat_rad = deg2rad(a_lat);
-		var b_long_rad = deg2rad(b_long);
-		var b_lat_rad = deg2rad(b_lat);
-		
-		var c = Math.cos(a_lat_rad) * Math.cos(b_lat_rad) * Math.cos(b_long_rad - a_long_rad) + Math.sin(a_lat_rad) * Math.sin(b_lat_rad);
-		return r * Math.acos(c);
-	}
-	
 	// MODE OVERLAYS
 	function Mode(name, penalty, flag) {
 		this.name = name;
 		this.enabled = true;
 		this.penalty = penalty || 0;
 		this.flag = flag || 0;
-		this.router = null;
 	}
 	
 	function ModeLookup(name, transit_data, penalty, flag) {
@@ -287,7 +264,7 @@ jQuery(function($) {
 			this.data = {};
 			for (var i = 0; i < transit_data.length; ++i) {
 				if (!(transit_data[i][0] in this.data)) {
-					this.data[transit_data[i][0]] = new Array();
+					this.data[transit_data[i][0]] = [];
 				}
 				
 				// append it
@@ -309,7 +286,7 @@ jQuery(function($) {
 		}
 		
 		return this.data[cur];
-	}
+	};
 	
 	function ModeMultiLookup(name, transit_data, index, penalty, flag) {
 		// call parent
@@ -325,7 +302,7 @@ jQuery(function($) {
 		this.data = {};
 		for (var i = 0; i < transit_data.length; ++i) {
 			if (!(transit_data[i][0] in this.data)) {
-				this.data[transit_data[i][0]] = new Array();
+				this.data[transit_data[i][0]] = [];
 			}
 			
 			// append it
@@ -349,13 +326,13 @@ jQuery(function($) {
 			}
 			
 			if (!(this.raw[i][0] in this.data)) {
-				this.data[this.raw[i][0]] = new Array();
+				this.data[this.raw[i][0]] = [];
 			}
 			
 			// append it
 			this.data[this.raw[i][0]].push([this.raw[i][1], this.raw[i][2 + index]]);
 		}
-	}
+	};
 	
 	// route from... just look up in table
 	ModeMultiLookup.prototype.routesFrom = function(rtr, cur) {
@@ -365,7 +342,7 @@ jQuery(function($) {
 		}
 		
 		return this.data[cur];
-	}
+	};
 	
 	function ModeWalk(pace, penalty, flag) {
 		// call parent
@@ -386,7 +363,7 @@ jQuery(function($) {
 		var qy = (cur - qx) / rtr.grid.countWidth;
 		
 		// return
-		var ret = new Array();
+		var ret = [];
 		
 		// lateral
 		var time_lateral = rtr.grid.meters * this.pace;
@@ -408,22 +385,22 @@ jQuery(function($) {
 			var time_diagonal = time_lateral * Math.SQRT2;
 			
 			if (qx > 0 && qy > 0) {
-				ret.push([cur - rtr.grid.countWidth - 1, time_lateral]);
+				ret.push([cur - rtr.grid.countWidth - 1, time_diagonal]);
 			}
 			if (qx < (rtr.grid.countWidth - 1) && qy > 0) {
-				ret.push([cur - rtr.grid.countWidth + 1, time_lateral]);
+				ret.push([cur - rtr.grid.countWidth + 1, time_diagonal]);
 			}
 			
 			if (qx > 0 && qy < (rtr.grid.countHeight - 1)) {
-				ret.push([cur + rtr.grid.countWidth - 1, time_lateral]);
+				ret.push([cur + rtr.grid.countWidth - 1, time_diagonal]);
 			}
 			if (qx < (rtr.grid.countWidth - 1) && qy < (rtr.grid.countHeight - 1)) {
-				ret.push([cur + rtr.grid.countWidth + 1, time_lateral]);
+				ret.push([cur + rtr.grid.countWidth + 1, time_diagonal]);
 			}
 		}
 		
 		return ret;
-	}
+	};
 	
 	// ROUTER
 	function Router(grid) {
@@ -431,22 +408,22 @@ jQuery(function($) {
 		this.grid = grid;
 		
 		// transit modes
-		this.modes = new Array();
+		this.modes = [];
 		
 		// exclusion array
-		this.closed_initial = new Array();
+		this.closed_initial = [];
 	}
 	
 	Router.prototype.addMode = function(mode) {
 		for (var i = 0; i < this.modes; ++i) {
-			if (this.modes[i].name === name) {
+			if (this.modes[i].name === mode.name) {
 				throw "There is already a mode with name " + mode + ".";
 			}
 		}
 		
 		// add mode
 		this.modes.push(mode);
-	}
+	};
 	
 	Router.prototype.getModeByName = function(name) {
 		for (var i = 0; i < this.modes.length; ++i) {
@@ -455,7 +432,7 @@ jQuery(function($) {
 			}
 		}
 		return null;
-	}
+	};
 	
 	Router.prototype.excludeCoordinatesAndWater = function(exclude, water, water_threshold) {
 		var i;
@@ -480,7 +457,7 @@ jQuery(function($) {
 				}
 			}
 		}
-	}
+	};
 	
 	Router.prototype.routeFrom = function(gc) {
 		var i, j;
@@ -565,7 +542,7 @@ jQuery(function($) {
 		
 		// mode of transportation
 		return came_from;
-	}
+	};
 	
 	
 	// GRID
@@ -606,7 +583,7 @@ jQuery(function($) {
 		var qy = Math.floor((lat - this.latMin) / this.sizeHeight);
 		
 		return {x: qx, y: qy};
-	}
+	};
 	
 	Grid.prototype.coordinateToGridIndex = function(lat, lng, check_bounds) {
 		// check bounds
@@ -619,7 +596,7 @@ jQuery(function($) {
 		var qy = Math.floor((lat - this.latMin) / this.sizeHeight);
 		
 		return (qy * this.countWidth) + qx;
-	}
+	};
 	
 	Grid.prototype.gridIndexToGridSub = function(index) {
 		var qx = index % this.countWidth;
