@@ -1,143 +1,94 @@
 jQuery(function($) {
 	"use strict";
 	
-	/* REQUIRES: jQuery, d3 and Google maps */
-	
-	// grid and router
-	var router;
-	var grid;
-	
-	// current result (for redrawing)
-	var start, stop;
-	var result = false;
-	var mode = "mode"; // mode or time
-	
-	// google maps object
-	var map;
-	var directionsService = null; // = new google.maps.DirectionsService();
-	var directionsRenderer = [];
+	/* REQUIRES: jQuery, d3 and leaflet */
+
+	// leaflet maps object
+	var map, layer;
 	
 	// disable fields
 	var disabled = $("input, button").not(":disabled").prop("disabled", true);
-	
-	// load data
-	$.ajax({
-		dataType: "json",
-		url:"../data/directions-s.json"
-	}).done(function(received_data) {
-		// received data
-		grid = new Grid(received_data.grid);
-		
-		// setup router
-		router = new Router(grid);
-		router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
-		
-		// add modes
-		router.addMode(new ModeMultiLookup("bike", received_data.bike, 0, 60, 1));
-		router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 90, 2));
-		router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 90, 2));
-		router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 120, 2));
-		//router.addMode(new ModeLookup("mbta_ferry", received_data.mbta_ferry, 120, 2));
-		router.addMode(new ModeWalk());
-		
-		// debug
-		console.log('** loaded **');
-		console.log('Grid size', grid.count);
-		
-		// setup map
-		setupMap();
-		
-		// enable interface
-		disabled.prop("disabled", false);
-	}).fail(function() {
-		// TODO: write data handling
-	});
 
-	// create and configure google map
+	function loadTransitLayer(address) {
+		// remove old layer
+		if (layer) {
+			layer.remove();
+			layer = null;
+		}
+
+		var dfd = $.Deferred();
+
+		// load data
+		$.ajax({
+			dataType: "json",
+			url: address
+		}).done(function(received_data) {
+			// do not bother drawing (could be race conditions here, should potentially stop multiple loads)
+			if (layer) {
+				return;
+			}
+
+			// add grid
+			layer = L.transitLayer(received_data);
+			layer.addTo(map);
+
+			// resolve
+			dfd.resolve();
+		}).fail(function(jqXHR, text, err) {
+			dfd.reject(text || err);
+		});
+
+		return dfd.promise();
+	}
+
+	// setup map
+	setupMap();
+
+	// load transit overlay
+	loadTransitLayer("../data/directions-s.json")
+		.done(function() {
+			// enable interface
+			disabled.prop("disabled", false);
+		})
+		.fail(function() {
+			// TODO: write error handling
+		});
+
+	// create and configure leaflet map
 	function setupMap() {
 		// create the map
-		map = new google.maps.Map(document.getElementById('map'), {
-			center: {lat: (grid.north + grid.south) / 2, lng: (grid.east + grid.west) / 2},
-			zoom: 13,
-			mapTypeId: 'roadmap',
-			
-			// simplify UI
-			disableDefaultUI: true,
-			
-			// no panning or zoom
-			draggable: false,
-			scrollwheel: false,
-			panControl: false,
-			disableDoubleClickZoom: true,
-			
-			// hide POI
-			clickableIcons: false,
-			styles: styleSilver()
+		map = L.map('map', {
+			scrollWheelZoom: false
 		});
 		
-		// fit the map
-		// toooo big
-		map.fitBounds({west: grid.west, east: grid.east, north: grid.north, south: grid.south});
+		// Statmen layer - Toner or Terrain
+		//L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png', {
+		//	attribution: 'Tiles by <a href="http://stamen.com/" target="_blank">Stamen Design</a> under <a href="http://creativecommons.org/licenses/by/3.0" target="_blank">CC BY 3.0</a>. Data &copy; <a href="http://openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors.',
+        //    subdomains: ['a', 'b', 'c', 'd'],
+		//	minZoom: 3,
+		//	maxZoom: 15
+		//}).addTo(map);
 		
-		// listen for click
-		map.addListener("click", function(lm) {
-			// get latitude and longitude
-			var lat = lm.latLng.lat(), lng = lm.latLng.lng();
-			
-			// has direction services?
-			if (directionsService) {
-				// has stop?
-				if (stop) {
-					// clear the map
-					start = null;
-					stop = null;
-					result = false;
-					
-					// clear the overlay
-					clearOverlay();
-					
-					return;
-				}
-				
-				// has start?
-				if (start) {
-					// store top point
-					stop = [lat, lng];
-					
-					// build directions
-					buildDirections(start[0], start[1], lat, lng);
-					
-					return;
-				}
-			}
-			
-			// store current starting longitude and latitude
-			start = [lat, lng];
-			
-			// build best mode overlay
-			buildOverlay(lat, lng);
+		// CARTO - light
+		L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}{r}.png', {
+			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution" target="_blank">CARTO</a>',
+			minZoom: 3,
+			maxZoom: 15
+		}).addTo(map);
+
+		// add resize event
+		$(window).on("resize", function() {
+			map.invalidateSize();
 		});
-		
-		// add grid
-		map.data.addGeoJson(grid.toGeoJSON());
-		map.data.setStyle({clickable: false, visible: false});
-		
-		// add bike layer
-		//var bikeLayer = new google.maps.BicyclingLayer();
-		//bikeLayer.setMap(map);
 	}
 	
 	// add event handlers
-	$(window).on("resize", function() {
-		google.maps.event.trigger(map, "resize");
-	})
-	
 	$("#transit-modes").on("click", ":checkbox", function() {
-		if (router) {
+		if (layer) {
 			var cur_mode = this.value, enabled = !!$(this).prop("checked");
 			
 			// router...
-			router.getModeByName(this.value).enabled = enabled;
+			layer.getRouter().getModeByName(this.value).enabled = enabled;
 			
 			// toggle bike speed options
 			if ("bike" === cur_mode) {
@@ -145,226 +96,260 @@ jQuery(function($) {
 			}
 			
 			// refresh
-			refresh();
+			layer.refreshOverlay();
 		}
 	});
 	
 	$("#map-mode").on("click", "[data-mode]", function() {
 		var $this = $(this), new_mode = $this.data("mode");
-		
-		// no change
-		if (mode === new_mode) {
-			return;
-		}
-		
-		// update interface
-		// slight browser optimization?
-		$(".active").filter("[data-mode]").removeClass("active");
-		$this.addClass("active");
-		
-		// set mode
-		mode = new_mode;
-		
-		if (router) {
-			refresh();
+
+		if (layer) {
+			// no change
+			if (layer.getMode() === new_mode) {
+				return;
+			}
+
+			// update interface
+			// slight browser optimization?
+			$(".active").filter("[data-mode]").removeClass("active");
+			$this.addClass("active");
+
+			// set mode
+			layer.setMode(new_mode);
 		}
 	});
 	
 	$("#bike-speed").on("click", ":radio", function() {
-		if (router) {
-			router.getModeByName("bike").setIndex(parseInt(this.value, 10));
+		if (layer) {
+			layer.getRouter().getModeByName("bike").setIndex(parseInt(this.value, 10));
 			
-			refresh();
+			layer.refreshOverlay();
 		}
 	});
-	
-	function refresh() {
-		if (start) {
-			buildOverlay(start[0], start[1]);
-		}
-	}
-	
-	function clearOverlay() {
-		map.data.setStyle({clickable: false, visible: false});
-		
-		for (var i = 0; i < directionsRenderer.length; ++i) {
-			directionsRenderer[i].setMap(null);
-		}
-		directionsRenderer.length = 0; // clear array
-	}
-	
-	function buildOverlay(start_lat, start_lng) {
-		// get start grid coordinate
-		var start_gc = grid.coordinateToGridIndex(start_lat, start_lng);
-		
-		if (-1 === start_gc) {
-			clearOverlay();
-			// TODO: show message about outside of region?
-			return false;
-		}
-		
-		/*
-		var t0, t1, rt = 0, iter = 10;
-		for (var i = 0; i < iter; ++i) {
-			t0 = performance.now();
-			result = router.routeFrom(start_gc);
-			t1 = performance.now();
-			rt += t1 - t0;
-		}
-		console.log(rt / iter);
-		*/
-		
-		// route
-		result = router.routeFrom(start_gc);
-		
-		// failed? probably clicked water
-		if (!result) {
-			// clear current overlay
-			clearOverlay();
-			return false;
-		}
-		
-		// draw overlay
-		drawOverlay();
-	}
-	
-	function drawOverlay() {	
-		if (!result) {
-			// clear current overlay
-			clearOverlay();
-			return;
-		}
-		
-		// transit time
-		if ("time" === mode) {
-			// calculate rng
-			var rng = d3.extent(result, function(a) { return a[0]; });
-			
-			// make scale
-			var scale = d3.scaleLinear().domain([0, 1800, 3600])
-				.range(["#4575b4", "#ffffbf", "#a50026"])
+
+	/* BEGIN LEAFLET LAYER */
+	L.TransitLayer = L.GeoJSON.extend({
+		statics: {
+			MODE_MODE: "mode",
+			MODE_TIME: "time"
+		},
+		options: {
+			resizeOnAdd: true,
+			modeColors: ["blue", "green", "red", "orange"],
+			timeScaleDomain: [0, 1800, 3600],
+			timeScaleRange: ["#4575b4", "#ffffbf", "#a50026"],
+			opacityMode: 0.3,
+			opacityTime: 0.6
+		},
+		initialize: function(data, options) {
+			// private properties
+			this._start = null;
+			this._result = false;
+			this._scale = null;
+			this._mode = L.TransitLayer.MODE_MODE;
+			this._grid = new Grid(data.grid);
+			this._router = new Router(this._grid);
+
+			// setup router
+			this._router.excludeCoordinatesAndWater(data.exclude, data.water, 0.3);
+
+			// add modes
+			// TODO: potentially generalize mode configuration to allow modes to be defined in the JSON
+			this._router.addMode(new ModeMultiLookup("bike", data.bike, 0, 60, 1));
+			this._router.addMode(new ModeLookup("mbta_bus", data.mbta_bus, 90, 2));
+			this._router.addMode(new ModeLookup("mbta_subway", data.mbta_subway, 90, 2));
+			this._router.addMode(new ModeLookup("mbta_commuter", data.mbta_commuter, 120, 2));
+			//this._router.addMode(new ModeLookup("mbta_ferry", data.mbta_ferry, 120, 2));
+			this._router.addMode(new ModeWalk());
+
+			// set options
+			L.setOptions(this, options);
+
+			// setup GeoJSON layer
+			L.GeoJSON.prototype.initialize.call(this, this._grid.toGeoJSON(), {
+				style: L.bind(this.styleCell, this)
+			});
+		},
+		getMode: function() {
+			return this._mode;
+		},
+		setMode: function(mode) {
+			switch (mode) {
+				case L.TransitLayer.MODE_MODE:
+				case L.TransitLayer.MODE_TIME:
+					// new mode
+					this._mode = mode;
+
+					// refresh
+					if (this._result) {
+						this.refreshOverlay();
+					}
+
+					break;
+				default:
+					throw "Invalid mode: " + mode;
+			}
+		},
+		getRouter: function() {
+			return this._router;
+		},
+		beforeAdd: function(map) {
+			// call parent
+			if (L.GeoJSON.beforeAdd) {
+				L.GeoJSON.beforeAdd.call(this, map);
+			}
+
+			// resize
+			if (this.options.resizeOnAdd) {
+				try {
+					map.getCenter();
+				}
+				catch (e) {
+					// hacky
+					var old_map = this._map;
+					this._map = map;
+					this.sizeMapForGrid(false);
+					this._map = old_map;
+				}
+			}
+		},
+		onAdd: function(map) {
+			// call parent
+			L.GeoJSON.prototype.onAdd.call(this, map);
+
+			// add listener for click
+			map.on("click", this.click, this);
+
+			// resize
+			if (this.options.resizeOnAdd) {
+				this.sizeMapForGrid(false);
+			}
+		},
+		onRemove: function(map) {
+			// remove listener for click
+			map.off("click", this.click, this);
+
+			// call parent
+			L.GeoJSON.prototype.onRemove.call(this, map);
+		},
+		click: function(ev) {
+			this.buildOverlay(ev.latlng);
+		},
+		sizeMapForGrid: function(inside) {
+			if ("undefined" === typeof inside) {
+				inside = false;
+			}
+
+			if (this._map) {
+				// fit bounds
+				var zoom = this._map.getBoundsZoom([
+					[this._grid.north, this._grid.west],
+					[this._grid.south, this._grid.east]
+				], inside);
+				this._map.setView([(this._grid.north + this._grid.south) / 2, (this._grid.east + this._grid.west) / 2], zoom);
+			}
+		},
+		buildOverlay: function(latlng) {
+			// convert to latitude and longitude
+			this._start = L.latLng(latlng);
+
+			// get start grid coordinate
+			var start_gc = this._grid.coordinateToGridIndex(this._start.lat, this._start.lng);
+
+			// outside of grid?
+			if (-1 === start_gc) {
+				// TODO: show message about outside of region?
+				this.clearOverlay();
+				return false;
+			}
+
+			/*
+			 var t0, t1, rt = 0, iter = 10;
+			 for (var i = 0; i < iter; ++i) {
+			 t0 = performance.now();
+			 result = router.routeFrom(start_gc);
+			 t1 = performance.now();
+			 rt += t1 - t0;
+			 }
+			 console.log(rt / iter);
+			 */
+
+			// route
+			this._result = this._router.routeFrom(start_gc);
+
+			// draw overlay
+			this.redraw();
+		},
+		clearOverlay: function() {
+			this._result = false;
+			this.redraw();
+		},
+		refreshOverlay: function() {
+			if (this._start) {
+				this.buildOverlay(this._start);
+			}
+		},
+		redraw: function() {
+			// prepare
+			this.prepareToDraw();
+
+			// reset style
+			var that = this;
+			that.eachLayer(function(l) { that.resetStyle(l); });
+		},
+		prepareToDraw: function() {
+			// #4575b4 #ffffbf #a50026
+			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
+
+			// configure scale
+			this._scale = d3.scaleLinear()
+				.domain(this.options.timeScaleDomain)
+				.range(this.options.timeScaleRange)
 				.interpolate(d3.interpolateHcl)
 				.clamp(true);
-			
-			// redraw map
-			map.data.setStyle(function(cell) {
-				var tm = result[cell.getProperty("gc")][0];
+		},
+		styleCell: function(feature) {
+			if (!this._result) {
+				return {stroke: false, fill: false, interactive: false};
+			}
+
+			// get feature
+			var gc = feature.properties.gc;
+
+			// time
+			if (L.TransitLayer.MODE_TIME === this._mode) {
+				var tm = this._result[gc][0];
 				if (tm < 0) {
-					return {clickable: false, visible: false};
+					return {stroke: false, fill: false, interactive: false};
 				}
-				return {fillColor: scale(tm), clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
-			});
-			
-			return;
-		}
-		
-		// redraw map
-		map.data.setStyle(function(cell) {
-			// based on mode of transit
-			switch (result[cell.getProperty("gc")][1]) {
-				case -1:
-					return {clickable: false, visible: false};
-				case 0:
-					return {fillColor: 'blue', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
-				case 1:
-					return {fillColor: 'green', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
-				case 2:
-					return {fillColor: 'red', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
-				case 3:
-					return {fillColor: 'orange', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
+
+				// color code
+				return {stroke: false, fill: true, fillOpacity: this.options.opacityTime, fillColor: this._scale(tm), interactive: false};
 			}
-		});
-	}
-	
-	function buildDirections(start_lat, start_lng, stop_lat, stop_lng) {
-		// get start grid coordinate
-		var start_gc = grid.coordinateToGridIndex(start_lat, start_lng);
-		var stop_gc = grid.coordinateToGridIndex(stop_lat, stop_lng);
-		
-		// nothing to do
-		if (!result || -1 === start_gc || -1 === stop_gc || start_gc === stop_gc) {
-			return;
-		}
-		
-		// clear overlay first
-		clearOverlay();
-		
-		// send directly to google or piece together?
-		var mode;
-		switch (result[stop_gc][1]) {
-			case 0:
-				fetchDirectionsLeg({lat: start_lat, lng: start_lng}, {lat: stop_lat, lng: stop_lng}, google.maps.TravelMode.WALKING);
-				break;
-			case 1:
-				// piece together
-				break;
-			case 2:
-				fetchDirectionsLeg({lat: start_lat, lng: start_lng}, {lat: stop_lat, lng: stop_lng}, google.maps.TravelMode.TRANSIT);
-				break;
-			case 3:
-				// piece together
-				break;
-			default:
-				return; // nothing to do
-		}
-	}
-	
-	function fetchDirectionsLeg(start, stop, mode) {
-		var request = {
-			origin: new google.maps.LatLng(start.lat, start.lng),
-			destination: new google.maps.LatLng(stop.lat, stop.lng),
-			travelMode: mode,
-			provideRouteAlternatives: false
-		};
-		
-		directionsService.route(request, function(result, status) {
-			if ("OK" === status) {
-				// create a renderer
-				var display = new google.maps.DirectionsRenderer({
-					draggable: false,
-					hideRouteList: true,
-					preserveViewport: true,
-					suppressMarkers: true
-				});
-				display.setMap(map);
-				
-				// set the directions
-				display.setDirections(result);
-				
-				// store it
-				directionsRenderer.push(display);
+
+			// mode color
+			var mode = this._result[gc][1];
+			if (mode >= 0 && mode < this.options.modeColors.length) {
+				return {stroke: false, fill: true, fillOpacity: this.options.opacityMode, fillColor: this.options.modeColors[mode], interactive: false};
 			}
-			else {
-				// TODO: display error?
-			}
-		});
-	}
-	
-	function deg2rad(deg) {
-		return deg * Math.PI / 180;
-	}
-	
-	function calculateDistanceInMeters(a_long, a_lat, b_long, b_lat) {
-		// radius of earth in m
-		var r = 6378137;
-		
-		// convert to radians
-		var a_long_rad = deg2rad(a_long);
-		var a_lat_rad = deg2rad(a_lat);
-		var b_long_rad = deg2rad(b_long);
-		var b_lat_rad = deg2rad(b_lat);
-		
-		var c = Math.cos(a_lat_rad) * Math.cos(b_lat_rad) * Math.cos(b_long_rad - a_long_rad) + Math.sin(a_lat_rad) * Math.sin(b_lat_rad);
-		return r * Math.acos(c);
-	}
-	
-	// MODE OVERLAYS
+
+			// none
+			return {stroke: false, fill: false, interactive: false};
+		}
+	});
+
+	// factor, Leaflet convention
+	L.transitLayer = function(options) {
+		return new L.TransitLayer(options);
+	};
+	/* END LEAFLET LAYER */
+
+	/* BEGIN ROUTER MODES - individual routing modes that can be used be the router */
 	function Mode(name, penalty, flag) {
 		this.name = name;
 		this.enabled = true;
 		this.penalty = penalty || 0;
 		this.flag = flag || 0;
-		this.router = null;
 	}
 	
 	function ModeLookup(name, transit_data, penalty, flag) {
@@ -376,7 +361,7 @@ jQuery(function($) {
 			this.data = {};
 			for (var i = 0; i < transit_data.length; ++i) {
 				if (!(transit_data[i][0] in this.data)) {
-					this.data[transit_data[i][0]] = new Array();
+					this.data[transit_data[i][0]] = [];
 				}
 				
 				// append it
@@ -398,7 +383,7 @@ jQuery(function($) {
 		}
 		
 		return this.data[cur];
-	}
+	};
 	
 	function ModeMultiLookup(name, transit_data, index, penalty, flag) {
 		// call parent
@@ -414,7 +399,7 @@ jQuery(function($) {
 		this.data = {};
 		for (var i = 0; i < transit_data.length; ++i) {
 			if (!(transit_data[i][0] in this.data)) {
-				this.data[transit_data[i][0]] = new Array();
+				this.data[transit_data[i][0]] = [];
 			}
 			
 			// append it
@@ -438,13 +423,13 @@ jQuery(function($) {
 			}
 			
 			if (!(this.raw[i][0] in this.data)) {
-				this.data[this.raw[i][0]] = new Array();
+				this.data[this.raw[i][0]] = [];
 			}
 			
 			// append it
 			this.data[this.raw[i][0]].push([this.raw[i][1], this.raw[i][2 + index]]);
 		}
-	}
+	};
 	
 	// route from... just look up in table
 	ModeMultiLookup.prototype.routesFrom = function(rtr, cur) {
@@ -454,7 +439,7 @@ jQuery(function($) {
 		}
 		
 		return this.data[cur];
-	}
+	};
 	
 	function ModeWalk(pace, penalty, flag) {
 		// call parent
@@ -475,7 +460,7 @@ jQuery(function($) {
 		var qy = (cur - qx) / rtr.grid.countWidth;
 		
 		// return
-		var ret = new Array();
+		var ret = [];
 		
 		// lateral
 		var time_lateral = rtr.grid.meters * this.pace;
@@ -497,45 +482,46 @@ jQuery(function($) {
 			var time_diagonal = time_lateral * Math.SQRT2;
 			
 			if (qx > 0 && qy > 0) {
-				ret.push([cur - rtr.grid.countWidth - 1, time_lateral]);
+				ret.push([cur - rtr.grid.countWidth - 1, time_diagonal]);
 			}
 			if (qx < (rtr.grid.countWidth - 1) && qy > 0) {
-				ret.push([cur - rtr.grid.countWidth + 1, time_lateral]);
+				ret.push([cur - rtr.grid.countWidth + 1, time_diagonal]);
 			}
 			
 			if (qx > 0 && qy < (rtr.grid.countHeight - 1)) {
-				ret.push([cur + rtr.grid.countWidth - 1, time_lateral]);
+				ret.push([cur + rtr.grid.countWidth - 1, time_diagonal]);
 			}
 			if (qx < (rtr.grid.countWidth - 1) && qy < (rtr.grid.countHeight - 1)) {
-				ret.push([cur + rtr.grid.countWidth + 1, time_lateral]);
+				ret.push([cur + rtr.grid.countWidth + 1, time_diagonal]);
 			}
 		}
 		
 		return ret;
-	}
+	};
+	/* END ROUTING MODES */
 	
-	// ROUTER
+	/* BEGIN ROUTER - a router that uses a basic  */
 	function Router(grid) {
 		// gird
 		this.grid = grid;
 		
 		// transit modes
-		this.modes = new Array();
+		this.modes = [];
 		
 		// exclusion array
-		this.closed_initial = new Array();
+		this.closed_initial = [];
 	}
 	
 	Router.prototype.addMode = function(mode) {
 		for (var i = 0; i < this.modes; ++i) {
-			if (this.modes[i].name === name) {
+			if (this.modes[i].name === mode.name) {
 				throw "There is already a mode with name " + mode + ".";
 			}
 		}
 		
 		// add mode
 		this.modes.push(mode);
-	}
+	};
 	
 	Router.prototype.getModeByName = function(name) {
 		for (var i = 0; i < this.modes.length; ++i) {
@@ -544,7 +530,7 @@ jQuery(function($) {
 			}
 		}
 		return null;
-	}
+	};
 	
 	Router.prototype.excludeCoordinatesAndWater = function(exclude, water, water_threshold) {
 		var i;
@@ -569,7 +555,7 @@ jQuery(function($) {
 				}
 			}
 		}
-	}
+	};
 	
 	Router.prototype.routeFrom = function(gc) {
 		var i, j;
@@ -581,12 +567,12 @@ jQuery(function($) {
 		if (closed[gc]) return false;
 		
 		// fill scores
-		var score_g = new Array(grid.count);
+		var score_g = new Array(this.grid.count);
 		score_g.fill(Number.POSITIVE_INFINITY);
 		score_g[gc] = 0;
 		
 		// came from
-		var came_from = new Array(grid.count);
+		var came_from = new Array(this.grid.count);
 		came_from[gc] = [-1, 0];
 		
 		// start with grid cell
@@ -654,10 +640,10 @@ jQuery(function($) {
 		
 		// mode of transportation
 		return came_from;
-	}
-	
-	
-	// GRID
+	};
+	/* END ROUTER */
+
+	/* BEGIN GRID - set of tools for handling a geographic grid, with equally size cells that are sequentially numbered */
 	function Grid(config) {
 		// store bounds
 		this.north = config.bounds.north;
@@ -695,7 +681,7 @@ jQuery(function($) {
 		var qy = Math.floor((lat - this.latMin) / this.sizeHeight);
 		
 		return {x: qx, y: qy};
-	}
+	};
 	
 	Grid.prototype.coordinateToGridIndex = function(lat, lng, check_bounds) {
 		// check bounds
@@ -708,7 +694,7 @@ jQuery(function($) {
 		var qy = Math.floor((lat - this.latMin) / this.sizeHeight);
 		
 		return (qy * this.countWidth) + qx;
-	}
+	};
 	
 	Grid.prototype.gridIndexToGridSub = function(index) {
 		var qx = index % this.countWidth;
@@ -756,19 +742,5 @@ jQuery(function($) {
 		// return TopoJSON format
 		return {type: "FeatureCollection", features: features};
 	};
-	
-	
-	// STYLES
-	function stylePlain() {
-		return [{
-				featureType: "poi",
-				elementType: "labels",
-				stylers: [{visibility: "off"}]
-			}];
-	}
-	
-	function styleSilver() {
-		// from google style builder
-		return [{"elementType":"geometry","stylers":[{"color":"#f5f5f5"}]},{"elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#f5f5f5"}]},{"featureType":"administrative.land_parcel","stylers":[{"visibility":"off"}]},{"featureType":"administrative.land_parcel","elementType":"labels.text.fill","stylers":[{"color":"#bdbdbd"}]},{"featureType":"administrative.neighborhood","stylers":[{"visibility":"off"}]},{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#eeeeee"}]},{"featureType":"poi","elementType":"labels.text","stylers":[{"visibility":"off"}]},{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"featureType":"poi.business","stylers":[{"visibility":"off"}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#e5e5e5"}]},{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#ffffff"}]},{"featureType":"road","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"road.arterial","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road.arterial","elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#dadada"}]},{"featureType":"road.highway","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road.highway","elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},{"featureType":"road.local","stylers":[{"visibility":"off"}]},{"featureType":"road.local","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]},{"featureType":"transit","stylers":[{"visibility":"off"}]},{"featureType":"transit.line","elementType":"geometry","stylers":[{"color":"#e5e5e5"}]},{"featureType":"transit.station","elementType":"geometry","stylers":[{"color":"#eeeeee"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#c9c9c9"}]},{"featureType":"water","elementType":"labels.text","stylers":[{"visibility":"off"}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]}];
-	}
+	/* END GRID */
 });
