@@ -1,7 +1,7 @@
 jQuery(function($) {
 	"use strict";
 	
-	/* REQUIRES: jQuery, d3 and Google maps */
+	/* REQUIRES: jQuery, d3 and leaflet */
 	
 	// grid and router
 	var router;
@@ -12,10 +12,8 @@ jQuery(function($) {
 	var result = false;
 	var mode = "mode"; // mode or time
 	
-	// google maps object
-	var map;
-	var directionsService = null; // = new google.maps.DirectionsService();
-	var directionsRenderer = [];
+	// leaflet maps object
+	var map, layer;
 	
 	// disable fields
 	var disabled = $("input, button").not(":disabled").prop("disabled", true);
@@ -53,63 +51,37 @@ jQuery(function($) {
 		// TODO: write data handling
 	});
 
-	// create and configure google map
+	// create and configure leaflet map
 	function setupMap() {
 		// create the map
-		map = new google.maps.Map(document.getElementById('map'), {
-			center: {lat: (grid.north + grid.south) / 2, lng: (grid.east + grid.west) / 2},
-			zoom: 13,
-			mapTypeId: 'roadmap',
-			
-			// simplify UI
-			disableDefaultUI: true,
-			
-			// no panning or zoom
-			draggable: false,
-			scrollwheel: false,
-			panControl: false,
-			disableDoubleClickZoom: true,
-			
-			// hide POI
-			clickableIcons: false,
-			styles: styleSilver()
+		map = L.map('map', {
+			scrollWheelZoom: false
 		});
 		
-		// fit the map
-		// toooo big
-		map.fitBounds({west: grid.west, east: grid.east, north: grid.north, south: grid.south});
+		// Statmen layer - Toner or Terrain
+		L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png', {
+			attribution: 'Tiles by <a href="http://stamen.com/" target="_blank">Stamen Design</a> under <a href="http://creativecommons.org/licenses/by/3.0" target="_blank">CC BY 3.0</a>. Data &copy; <a href="http://openstreetmap.org/" target="_blank">OpenStreetMap</a> contributors.',
+            subdomains: ['a', 'b', 'c', 'd'],
+			minZoom: 3,
+			maxZoom: 15
+		}).addTo(map);
+	
+		// Tangram layer - requires tangram inclusion
+		//Tangram.leafletLayer({
+		//	scene: "directions.yaml",
+		//	attribution: '<a href="https://mapzen.com/tangram" target="_blank">Tangram</a> by <a href="https://mapzen.com/" target="_blank">Mapzen</a> | &copy; OSM contributors'
+		//}).addTo(map);
+		
+		// fit bounds
+		map.fitBounds([
+			[grid.north, grid.west],
+			[grid.south, grid.east]
+		]);
 		
 		// listen for click
-		map.addListener("click", function(lm) {
+		map.on("click", function(ev) {
 			// get latitude and longitude
-			var lat = lm.latLng.lat(), lng = lm.latLng.lng();
-			
-			// has direction services?
-			if (directionsService) {
-				// has stop?
-				if (stop) {
-					// clear the map
-					start = null;
-					stop = null;
-					result = false;
-					
-					// clear the overlay
-					clearOverlay();
-					
-					return;
-				}
-				
-				// has start?
-				if (start) {
-					// store top point
-					stop = [lat, lng];
-					
-					// build directions
-					buildDirections(start[0], start[1], lat, lng);
-					
-					return;
-				}
-			}
+			var lat = ev.latlng.lat, lng = ev.latlng.lng;
 			
 			// store current starting longitude and latitude
 			start = [lat, lng];
@@ -119,17 +91,15 @@ jQuery(function($) {
 		});
 		
 		// add grid
-		map.data.addGeoJson(grid.toGeoJSON());
-		map.data.setStyle({clickable: false, visible: false});
-		
-		// add bike layer
-		//var bikeLayer = new google.maps.BicyclingLayer();
-		//bikeLayer.setMap(map);
+		layer = L.geoJSON(grid.toGeoJSON(), {
+			style: _styleCell
+		});
+		layer.addTo(map);
 	}
 	
 	// add event handlers
 	$(window).on("resize", function() {
-		google.maps.event.trigger(map, "resize");
+		map.invalidateSize();
 	})
 	
 	$("#transit-modes").on("click", ":checkbox", function() {
@@ -185,12 +155,8 @@ jQuery(function($) {
 	}
 	
 	function clearOverlay() {
-		map.data.setStyle({clickable: false, visible: false});
-		
-		for (var i = 0; i < directionsRenderer.length; ++i) {
-			directionsRenderer[i].setMap(null);
-		}
-		directionsRenderer.length = 0; // clear array
+		result = false;
+		layer.eachLayer(function(l) { layer.resetStyle(l); });
 	}
 	
 	function buildOverlay(start_lat, start_lng) {
@@ -228,116 +194,54 @@ jQuery(function($) {
 		drawOverlay();
 	}
 	
-	function drawOverlay() {	
+	function drawOverlay() {
+		layer.eachLayer(function(l) { layer.resetStyle(l); });
+	}
+			
+	// make scale
+	var scale = d3.scaleLinear().domain([0, 1800, 3600])
+		.range(["#4575b4", "#ffffbf", "#a50026"])
+		.interpolate(d3.interpolateHcl)
+		.clamp(true);
+	
+	var CellStyles = {
+		NONE: {stroke: false, fill: false, interactive: false},
+		WALK: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'blue', interactive: false},
+		BIKE: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'green', interactive: false},
+		MBTA: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'red', interactive: false},
+		MIX: {stroke: false, fill: true, fillOpacity: 0.5, fillColor: 'orange', interactive: false},
+	};
+	
+	function _styleCell(feature) {
 		if (!result) {
-			// clear current overlay
-			clearOverlay();
-			return;
+			return CellStyles.NONE;
 		}
 		
-		// transit time
+		// get feature
+		var gc = feature.properties.gc;
+		
 		if ("time" === mode) {
-			// calculate rng
-			var rng = d3.extent(result, function(a) { return a[0]; });
-			
-			// make scale
-			var scale = d3.scaleLinear().domain([0, 1800, 3600])
-				.range(["#4575b4", "#ffffbf", "#a50026"])
-				.interpolate(d3.interpolateHcl)
-				.clamp(true);
-			
-			// redraw map
-			map.data.setStyle(function(cell) {
-				var tm = result[cell.getProperty("gc")][0];
-				if (tm < 0) {
-					return {clickable: false, visible: false};
-				}
-				return {fillColor: scale(tm), clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
-			});
-			
-			return;
-		}
-		
-		// redraw map
-		map.data.setStyle(function(cell) {
-			// based on mode of transit
-			switch (result[cell.getProperty("gc")][1]) {
-				case -1:
-					return {clickable: false, visible: false};
-				case 0:
-					return {fillColor: 'blue', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
-				case 1:
-					return {fillColor: 'green', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
-				case 2:
-					return {fillColor: 'red', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
-				case 3:
-					return {fillColor: 'orange', clickable: false, zIndex: 2, fillOpacity: 0.5, visible: true, strokeWeight: 0};
+			var tm = result[gc][0];
+			if (tm < 0) {
+				return CellStyles.NONE;
 			}
-		});
-	}
-	
-	function buildDirections(start_lat, start_lng, stop_lat, stop_lng) {
-		// get start grid coordinate
-		var start_gc = grid.coordinateToGridIndex(start_lat, start_lng);
-		var stop_gc = grid.coordinateToGridIndex(stop_lat, stop_lng);
-		
-		// nothing to do
-		if (!result || -1 === start_gc || -1 === stop_gc || start_gc === stop_gc) {
-			return;
+			
+			// color code
+			return {stroke: false, fill: true, fillOpacity: 0.5, fillColor: scale(tm), interactive: false};
 		}
 		
-		// clear overlay first
-		clearOverlay();
-		
-		// send directly to google or piece together?
-		var mode;
-		switch (result[stop_gc][1]) {
+		switch (result[gc][1]) {
 			case 0:
-				fetchDirectionsLeg({lat: start_lat, lng: start_lng}, {lat: stop_lat, lng: stop_lng}, google.maps.TravelMode.WALKING);
-				break;
+				return CellStyles.WALK;
 			case 1:
-				// piece together
-				break;
+				return CellStyles.BIKE;
 			case 2:
-				fetchDirectionsLeg({lat: start_lat, lng: start_lng}, {lat: stop_lat, lng: stop_lng}, google.maps.TravelMode.TRANSIT);
-				break;
+				return CellStyles.MBTA;
 			case 3:
-				// piece together
-				break;
+				return CellStyles.MIX;
 			default:
-				return; // nothing to do
+				return CellStyles.NONE;
 		}
-	}
-	
-	function fetchDirectionsLeg(start, stop, mode) {
-		var request = {
-			origin: new google.maps.LatLng(start.lat, start.lng),
-			destination: new google.maps.LatLng(stop.lat, stop.lng),
-			travelMode: mode,
-			provideRouteAlternatives: false
-		};
-		
-		directionsService.route(request, function(result, status) {
-			if ("OK" === status) {
-				// create a renderer
-				var display = new google.maps.DirectionsRenderer({
-					draggable: false,
-					hideRouteList: true,
-					preserveViewport: true,
-					suppressMarkers: true
-				});
-				display.setMap(map);
-				
-				// set the directions
-				display.setDirections(result);
-				
-				// store it
-				directionsRenderer.push(display);
-			}
-			else {
-				// TODO: display error?
-			}
-		});
 	}
 	
 	function deg2rad(deg) {
@@ -756,19 +660,4 @@ jQuery(function($) {
 		// return TopoJSON format
 		return {type: "FeatureCollection", features: features};
 	};
-	
-	
-	// STYLES
-	function stylePlain() {
-		return [{
-				featureType: "poi",
-				elementType: "labels",
-				stylers: [{visibility: "off"}]
-			}];
-	}
-	
-	function styleSilver() {
-		// from google style builder
-		return [{"elementType":"geometry","stylers":[{"color":"#f5f5f5"}]},{"elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#f5f5f5"}]},{"featureType":"administrative.land_parcel","stylers":[{"visibility":"off"}]},{"featureType":"administrative.land_parcel","elementType":"labels.text.fill","stylers":[{"color":"#bdbdbd"}]},{"featureType":"administrative.neighborhood","stylers":[{"visibility":"off"}]},{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#eeeeee"}]},{"featureType":"poi","elementType":"labels.text","stylers":[{"visibility":"off"}]},{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"featureType":"poi.business","stylers":[{"visibility":"off"}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#e5e5e5"}]},{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#ffffff"}]},{"featureType":"road","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"road.arterial","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road.arterial","elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#dadada"}]},{"featureType":"road.highway","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road.highway","elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},{"featureType":"road.local","stylers":[{"visibility":"off"}]},{"featureType":"road.local","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]},{"featureType":"transit","stylers":[{"visibility":"off"}]},{"featureType":"transit.line","elementType":"geometry","stylers":[{"color":"#e5e5e5"}]},{"featureType":"transit.station","elementType":"geometry","stylers":[{"color":"#eeeeee"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#c9c9c9"}]},{"featureType":"water","elementType":"labels.text","stylers":[{"visibility":"off"}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]}];
-	}
 });
