@@ -2,54 +2,57 @@ jQuery(function($) {
 	"use strict";
 	
 	/* REQUIRES: jQuery, d3 and leaflet */
-	
-	// grid and router
-	var router;
-	var grid;
-	
-	// current result (for redrawing)
-	var start;
-	var result = false;
-	var mode = "mode"; // mode or time
-	
+
 	// leaflet maps object
 	var map, layer;
 	
 	// disable fields
 	var disabled = $("input, button").not(":disabled").prop("disabled", true);
-	
-	// load data
-	$.ajax({
-		dataType: "json",
-		url:"../data/directions-s.json"
-	}).done(function(received_data) {
-		// received data
-		grid = new Grid(received_data.grid);
-		
-		// setup router
-		router = new Router(grid);
-		router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
-		
-		// add modes
-		router.addMode(new ModeMultiLookup("bike", received_data.bike, 0, 60, 1));
-		router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 90, 2));
-		router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 90, 2));
-		router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 120, 2));
-		//router.addMode(new ModeLookup("mbta_ferry", received_data.mbta_ferry, 120, 2));
-		router.addMode(new ModeWalk());
-		
-		// debug
-		console.log('** loaded **');
-		console.log('Grid size', grid.count);
-		
-		// setup map
-		setupMap();
-		
-		// enable interface
-		disabled.prop("disabled", false);
-	}).fail(function() {
-		// TODO: write data handling
-	});
+
+	function loadTransitLayer(address) {
+		// remove old layer
+		if (layer) {
+			layer.remove();
+			layer = null;
+		}
+
+		var dfd = $.Deferred();
+
+		// load data
+		$.ajax({
+			dataType: "json",
+			url: address
+		}).done(function(received_data) {
+			// do not bother drawing (could be race conditions here, should potentially stop multiple loads)
+			if (layer) {
+				return;
+			}
+
+			// add grid
+			layer = L.transitLayer(received_data);
+			layer.addTo(map);
+
+			// resolve
+			dfd.resolve();
+		}).fail(function(jqXHR, text, err) {
+			dfd.reject(text || err);
+		});
+
+		return dfd.promise();
+	}
+
+	// setup map
+	setupMap();
+
+	// load transit overlay
+	loadTransitLayer("../data/directions-s.json")
+		.done(function() {
+			// enable interface
+			disabled.prop("disabled", false);
+		})
+		.fail(function() {
+			// TODO: write error handling
+		});
 
 	// create and configure leaflet map
 	function setupMap() {
@@ -72,45 +75,20 @@ jQuery(function($) {
 			minZoom: 3,
 			maxZoom: 15
 		}).addTo(map);
-		
-		// fit bounds
-		var inside = false;
-		var zoom = map.getBoundsZoom([
-			[grid.north, grid.west],
-			[grid.south, grid.east]
-		], inside);
-		map.setView([(grid.north + grid.south) / 2, (grid.east + grid.west) / 2], zoom);
-		
-		// listen for click
-		map.on("click", function(ev) {
-			// get latitude and longitude
-			var lat = ev.latlng.lat, lng = ev.latlng.lng;
-			
-			// store current starting longitude and latitude
-			start = [lat, lng];
-			
-			// build best mode overlay
-			buildOverlay(lat, lng);
+
+		// add resize event
+		$(window).on("resize", function() {
+			map.invalidateSize();
 		});
-		
-		// add grid
-		layer = L.geoJSON(grid.toGeoJSON(), {
-			style: _styleCell
-		});
-		layer.addTo(map);
 	}
 	
 	// add event handlers
-	$(window).on("resize", function() {
-		map.invalidateSize();
-	});
-	
 	$("#transit-modes").on("click", ":checkbox", function() {
-		if (router) {
+		if (layer) {
 			var cur_mode = this.value, enabled = !!$(this).prop("checked");
 			
 			// router...
-			router.getModeByName(this.value).enabled = enabled;
+			layer.getRouter().getModeByName(this.value).enabled = enabled;
 			
 			// toggle bike speed options
 			if ("bike" === cur_mode) {
@@ -118,138 +96,255 @@ jQuery(function($) {
 			}
 			
 			// refresh
-			refresh();
+			layer.refreshOverlay();
 		}
 	});
 	
 	$("#map-mode").on("click", "[data-mode]", function() {
 		var $this = $(this), new_mode = $this.data("mode");
-		
-		// no change
-		if (mode === new_mode) {
-			return;
-		}
-		
-		// update interface
-		// slight browser optimization?
-		$(".active").filter("[data-mode]").removeClass("active");
-		$this.addClass("active");
-		
-		// set mode
-		mode = new_mode;
-		
-		if (router) {
-			refresh();
+
+		if (layer) {
+			// no change
+			if (layer.getMode() === new_mode) {
+				return;
+			}
+
+			// update interface
+			// slight browser optimization?
+			$(".active").filter("[data-mode]").removeClass("active");
+			$this.addClass("active");
+
+			// set mode
+			layer.setMode(new_mode);
 		}
 	});
 	
 	$("#bike-speed").on("click", ":radio", function() {
-		if (router) {
-			router.getModeByName("bike").setIndex(parseInt(this.value, 10));
+		if (layer) {
+			layer.getRouter().getModeByName("bike").setIndex(parseInt(this.value, 10));
 			
-			refresh();
+			layer.refreshOverlay();
 		}
 	});
-	
-	function refresh() {
-		if (start) {
-			buildOverlay(start[0], start[1]);
-		}
-	}
-	
-	function clearOverlay() {
-		result = false;
-		layer.eachLayer(function(l) { layer.resetStyle(l); });
-	}
-	
-	function buildOverlay(start_lat, start_lng) {
-		// get start grid coordinate
-		var start_gc = grid.coordinateToGridIndex(start_lat, start_lng);
-		
-		if (-1 === start_gc) {
-			clearOverlay();
-			// TODO: show message about outside of region?
-			return false;
-		}
-		
-		/*
-		var t0, t1, rt = 0, iter = 10;
-		for (var i = 0; i < iter; ++i) {
-			t0 = performance.now();
-			result = router.routeFrom(start_gc);
-			t1 = performance.now();
-			rt += t1 - t0;
-		}
-		console.log(rt / iter);
-		*/
-		
-		// route
-		result = router.routeFrom(start_gc);
-		
-		// failed? probably clicked water
-		if (!result) {
-			// clear current overlay
-			clearOverlay();
-			return false;
-		}
-		
-		// draw overlay
-		drawOverlay();
-	}
-	
-	function drawOverlay() {
-		layer.eachLayer(function(l) { layer.resetStyle(l); });
-	}
-			
-	// make scale
-	// #4575b4 #ffffbf #a50026
-	// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
-	var scale = d3.scaleLinear().domain([0, 1800, 3600])
-		.range(["#4575b4", "#ffffbf", "#a50026"])
-		.interpolate(d3.interpolateHcl)
-		.clamp(true);
-	
-	var CellStyles = {
-		NONE: {stroke: false, fill: false, interactive: false},
-		WALK: {stroke: false, fill: true, fillOpacity: 0.4, fillColor: 'blue', interactive: false},
-		BIKE: {stroke: false, fill: true, fillOpacity: 0.4, fillColor: 'green', interactive: false},
-		MBTA: {stroke: false, fill: true, fillOpacity: 0.4, fillColor: 'red', interactive: false},
-		MIX: {stroke: false, fill: true, fillOpacity: 0.4, fillColor: 'orange', interactive: false}
-	};
-	
-	function _styleCell(feature) {
-		if (!result) {
-			return CellStyles.NONE;
-		}
-		
-		// get feature
-		var gc = feature.properties.gc;
-		
-		if ("time" === mode) {
-			var tm = result[gc][0];
-			if (tm < 0) {
-				return CellStyles.NONE;
+
+	/* BEGIN LEAFLET LAYER */
+	L.TransitLayer = L.GeoJSON.extend({
+		statics: {
+			MODE_MODE: "mode",
+			MODE_TIME: "time"
+		},
+		options: {
+			resizeOnAdd: true,
+			modeColors: ["blue", "green", "red", "orange"],
+			timeScaleDomain: [0, 1800, 3600],
+			timeScaleRange: ["#4575b4", "#ffffbf", "#a50026"],
+			opacityMode: 0.3,
+			opacityTime: 0.6
+		},
+		initialize: function(data, options) {
+			// private properties
+			this._start = null;
+			this._result = false;
+			this._scale = null;
+			this._mode = L.TransitLayer.MODE_MODE;
+			this._grid = new Grid(data.grid);
+			this._router = new Router(this._grid);
+
+			// setup router
+			this._router.excludeCoordinatesAndWater(data.exclude, data.water, 0.3);
+
+			// add modes
+			// TODO: potentially generalize mode configuration to allow modes to be defined in the JSON
+			this._router.addMode(new ModeMultiLookup("bike", data.bike, 0, 60, 1));
+			this._router.addMode(new ModeLookup("mbta_bus", data.mbta_bus, 90, 2));
+			this._router.addMode(new ModeLookup("mbta_subway", data.mbta_subway, 90, 2));
+			this._router.addMode(new ModeLookup("mbta_commuter", data.mbta_commuter, 120, 2));
+			//this._router.addMode(new ModeLookup("mbta_ferry", data.mbta_ferry, 120, 2));
+			this._router.addMode(new ModeWalk());
+
+			// set options
+			L.setOptions(this, options);
+
+			// setup GeoJSON layer
+			L.GeoJSON.prototype.initialize.call(this, this._grid.toGeoJSON(), {
+				style: L.bind(this.styleCell, this)
+			});
+		},
+		getMode: function() {
+			return this._mode;
+		},
+		setMode: function(mode) {
+			switch (mode) {
+				case L.TransitLayer.MODE_MODE:
+				case L.TransitLayer.MODE_TIME:
+					// new mode
+					this._mode = mode;
+
+					// refresh
+					if (this._result) {
+						this.refreshOverlay();
+					}
+
+					break;
+				default:
+					throw "Invalid mode: " + mode;
 			}
-			
-			// color code
-			return {stroke: false, fill: true, fillOpacity: 0.6, fillColor: scale(tm), interactive: false};
+		},
+		getRouter: function() {
+			return this._router;
+		},
+		beforeAdd: function(map) {
+			// call parent
+			if (L.GeoJSON.beforeAdd) {
+				L.GeoJSON.beforeAdd.call(this, map);
+			}
+
+			// resize
+			if (this.options.resizeOnAdd) {
+				try {
+					map.getCenter();
+				}
+				catch (e) {
+					// hacky
+					var old_map = this._map;
+					this._map = map;
+					this.sizeMapForGrid(false);
+					this._map = old_map;
+				}
+			}
+		},
+		onAdd: function(map) {
+			// call parent
+			L.GeoJSON.prototype.onAdd.call(this, map);
+
+			// add listener for click
+			map.on("click", this.click, this);
+
+			// resize
+			if (this.options.resizeOnAdd) {
+				this.sizeMapForGrid(false);
+			}
+		},
+		onRemove: function(map) {
+			// remove listener for click
+			map.off("click", this.click, this);
+
+			// call parent
+			L.GeoJSON.prototype.onRemove.call(this, map);
+		},
+		click: function(ev) {
+			this.buildOverlay(ev.latlng);
+		},
+		sizeMapForGrid: function(inside) {
+			if ("undefined" === typeof inside) {
+				inside = false;
+			}
+
+			if (this._map) {
+				// fit bounds
+				var zoom = this._map.getBoundsZoom([
+					[this._grid.north, this._grid.west],
+					[this._grid.south, this._grid.east]
+				], inside);
+				this._map.setView([(this._grid.north + this._grid.south) / 2, (this._grid.east + this._grid.west) / 2], zoom);
+			}
+		},
+		buildOverlay: function(latlng) {
+			// convert to latitude and longitude
+			this._start = L.latLng(latlng);
+
+			// get start grid coordinate
+			var start_gc = this._grid.coordinateToGridIndex(this._start.lat, this._start.lng);
+
+			// outside of grid?
+			if (-1 === start_gc) {
+				// TODO: show message about outside of region?
+				this.clearOverlay();
+				return false;
+			}
+
+			/*
+			 var t0, t1, rt = 0, iter = 10;
+			 for (var i = 0; i < iter; ++i) {
+			 t0 = performance.now();
+			 result = router.routeFrom(start_gc);
+			 t1 = performance.now();
+			 rt += t1 - t0;
+			 }
+			 console.log(rt / iter);
+			 */
+
+			// route
+			this._result = this._router.routeFrom(start_gc);
+
+			// draw overlay
+			this.redraw();
+		},
+		clearOverlay: function() {
+			this._result = false;
+			this.redraw();
+		},
+		refreshOverlay: function() {
+			if (this._start) {
+				this.buildOverlay(this._start);
+			}
+		},
+		redraw: function() {
+			// prepare
+			this.prepareToDraw();
+
+			// reset style
+			var that = this;
+			that.eachLayer(function(l) { that.resetStyle(l); });
+		},
+		prepareToDraw: function() {
+			// #4575b4 #ffffbf #a50026
+			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
+
+			// configure scale
+			this._scale = d3.scaleLinear()
+				.domain(this.options.timeScaleDomain)
+				.range(this.options.timeScaleRange)
+				.interpolate(d3.interpolateHcl)
+				.clamp(true);
+		},
+		styleCell: function(feature) {
+			if (!this._result) {
+				return {stroke: false, fill: false, interactive: false};
+			}
+
+			// get feature
+			var gc = feature.properties.gc;
+
+			// time
+			if (L.TransitLayer.MODE_TIME === this._mode) {
+				var tm = this._result[gc][0];
+				if (tm < 0) {
+					return {stroke: false, fill: false, interactive: false};
+				}
+
+				// color code
+				return {stroke: false, fill: true, fillOpacity: this.options.opacityTime, fillColor: this._scale(tm), interactive: false};
+			}
+
+			// mode color
+			var mode = this._result[gc][1];
+			if (mode >= 0 && mode < this.options.modeColors.length) {
+				return {stroke: false, fill: true, fillOpacity: this.options.opacityMode, fillColor: this.options.modeColors[mode], interactive: false};
+			}
+
+			// none
+			return {stroke: false, fill: false, interactive: false};
 		}
-		
-		switch (result[gc][1]) {
-			case 0:
-				return CellStyles.WALK;
-			case 1:
-				return CellStyles.BIKE;
-			case 2:
-				return CellStyles.MBTA;
-			case 3:
-				return CellStyles.MIX;
-			default:
-				return CellStyles.NONE;
-		}
-	}
-	
-	// MODE OVERLAYS
+	});
+
+	// factor, Leaflet convention
+	L.transitLayer = function(options) {
+		return new L.TransitLayer(options);
+	};
+	/* END LEAFLET LAYER */
+
+	/* BEGIN ROUTER MODES - individual routing modes that can be used be the router */
 	function Mode(name, penalty, flag) {
 		this.name = name;
 		this.enabled = true;
@@ -403,8 +498,9 @@ jQuery(function($) {
 		
 		return ret;
 	};
+	/* END ROUTING MODES */
 	
-	// ROUTER
+	/* BEGIN ROUTER - a router that uses a basic  */
 	function Router(grid) {
 		// gird
 		this.grid = grid;
@@ -471,12 +567,12 @@ jQuery(function($) {
 		if (closed[gc]) return false;
 		
 		// fill scores
-		var score_g = new Array(grid.count);
+		var score_g = new Array(this.grid.count);
 		score_g.fill(Number.POSITIVE_INFINITY);
 		score_g[gc] = 0;
 		
 		// came from
-		var came_from = new Array(grid.count);
+		var came_from = new Array(this.grid.count);
 		came_from[gc] = [-1, 0];
 		
 		// start with grid cell
@@ -545,9 +641,9 @@ jQuery(function($) {
 		// mode of transportation
 		return came_from;
 	};
-	
-	
-	// GRID
+	/* END ROUTER */
+
+	/* BEGIN GRID - set of tools for handling a geographic grid, with equally size cells that are sequentially numbered */
 	function Grid(config) {
 		// store bounds
 		this.north = config.bounds.north;
@@ -646,4 +742,5 @@ jQuery(function($) {
 		// return TopoJSON format
 		return {type: "FeatureCollection", features: features};
 	};
+	/* END GRID */
 });
