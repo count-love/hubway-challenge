@@ -16,6 +16,7 @@
 <script src="external/leaflet/1.0.3/leaflet.js"></script>
 <script src="external/jdataview/2.5.0/jdataview.js"></script>
 <script src="external/jbinary/2.1.3/jbinary.js"></script>
+<script src="external/highcharts/highcharts.js"></script>
 <script src="datasource.js"></script> 
 <script src="hubway.js"></script>
 </head>
@@ -39,14 +40,23 @@
 
               <div class="btn-group" role="stations">
               <button class="btn btn-default btn-group dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                Select station groups
+                Station groups
                 <span class="caret"></span>
               </button>
-              <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList">
-
-              </ul>
+              <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList"></ul>
               </div>
+              
+              <div class="btn-group" role="stations">
+              <button class="btn btn-default btn-group dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                Cluster results...
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu2" id="js_kMeansGroups"></ul>
+              </div>
+
+
             </div>
+
 
             <div class="row filter" id="js_queries"></div>
             
@@ -56,6 +66,8 @@
  
             <div class="filter row">
                 <div id="js_description"></div>
+            
+                <div id="js_chart"></div>
             </div>
             
         </div>

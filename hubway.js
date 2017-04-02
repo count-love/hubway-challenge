@@ -15,14 +15,15 @@ var kMeansNumberOfClusters = 5;
 var selectedFilters = {
     'startYear': {}, 
     'startMonth': {},
-    'startDay': {},
+    'startWeekday': {},
     'startHour': {},
+    'stationStart': {},
     'member': {},
-    'stationStart': {}
+    'gender': {} 
 };
    
 var markerOptions = {
-    'distance': {'stroke': false, 'fillOpacity': 0.2, 'pane': 'data'},
+    'distance': {'stroke': false, 'fillOpacity': 0.1, 'pane': 'data'},
     'vector': { 'stroke': 'blue', 'fillColor': 'none', 'fillOpacity': 0.2, 'pane': 'data'},
     'data': {'stroke': false, 'fillOpacity': 0.5, 'pane': 'data'},
     'default': {'stroke': false, 'fillOpacity': 0.5},
@@ -53,7 +54,7 @@ var queryFilters = {
     ],
     
     'week': [
-        {'label': 'all', 'set': {'startDay': null}},
+        {'label': 'all', 'set': {'startWeekday': null}},
         {'label': 'weekday', 'tooltip': 'Monday-Friday', 'set': {'startWeekday': [0, 1, 2, 3, 4]}},
         {'label': 'weekend', 'tooltip': 'Saturday, Sunday', 'set': {'startWeekday': [5, 6]}}
     ],
@@ -80,6 +81,13 @@ var queryFilters = {
         {'label': 'all', 'set': {'member': null}},
         {'label': 'member', 'tooltip': 'Member', 'set': {'member': [1]}},
         {'label': 'casual', 'tooltip': 'Non-member', 'set': {'member': [0]}},
+    ],
+    
+    'gender': [
+        {'label': 'all', 'set': {'gender': null}},
+        {'label': 'unspecified', 'set': {'gender': [0]}},
+        {'label': 'male', 'set': {'gender': [1]}},
+        {'label': 'female', 'set': {'gender': [2]}},                
     ]
 };
 
@@ -93,6 +101,8 @@ var stationGroups = [
     {'label': 'Cambridge', stops: [133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175]},
     {'label': 'Somerville', stops: [176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 189, 195]}    
 ];
+
+var kMeansGroups = [0, 5, 10, 20, 40];
 
 //--- kMeans clustering code, inspired by
 // https://burakkanber.com/blog/machine-learning-k-means-clustering-in-javascript-part-1/
@@ -330,14 +340,15 @@ function getFilterOptions(options) {
 
     var filter = {};
     
-    options.forEach(function(column) {    
+    options.forEach(function(column) {
         if (column == 'stationStart' || column == 'stationEnd') {
-            filter[column] = Object.keys(selectedFilters[column]).length == 0 ? null : Object.keys(selectedFilters[column]);
-        } else if (column == 'member') {
-            alert('MEMBER NOT CURRENTLY SET UP!');
-        } else {
-            filter[column] = selectedFilters[column] == null ? null : Object.keys(selectedFilters[column]);
+            if (Object.keys(hubway.stations).length == Object.keys(selectedFilters.stationStart).length) {
+                filter[column] = null;
+            } else {
+                filter[column] = Object.keys(selectedFilters[column]);
+            }
         }
+        filter[column] = selectedFilters[column] == null ? null : Object.keys(selectedFilters[column]);
     });
 
     return filter;
@@ -360,13 +371,13 @@ var illustrations = {
 
   	    queryResults: function() { 
             
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
   	        var results = DataSource.query(cachedDataSource, "stationStart", null, "sum");
 
             // just an approximation... 
             // 1. get the number of days of the week
             // 2. multiply by the number of weeks in a month, and then the number of months (either all, or 4 for a season)
-            var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startDay'].length);
+            var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startWeekday'].length);
             totalNumberOfDays = totalNumberOfDays * 4 * (selectedFilters['startMonth'] == null ? 12 : 4);
                         
             Object.keys(results).forEach(function(station) {
@@ -398,13 +409,13 @@ var illustrations = {
 
   	    queryResults: function() { 
             
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
             var results = DataSource.query(cachedDataSource, "stationEnd", null, "sum");
 
             // just an approximation... 
             // 1. get the number of days of the week
             // 2. multiply by the number of weeks in a month, and then the number of months (either all, or 4 for a season)
-            var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startDay'].length);
+            var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startWeekday'].length);
             totalNumberOfDays = totalNumberOfDays * 4 * (selectedFilters['startMonth'] == null ? 12 : 4);
                         
             Object.keys(results).forEach(function(station) {
@@ -436,7 +447,7 @@ var illustrations = {
       	
   	    queryResults: function() { 
 
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
             
   	        var results = DataSource.query(
                 cachedDataSource,
@@ -455,157 +466,188 @@ var illustrations = {
                     'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};            
         }
 	},
-
-	'distance-all': {
-	    group: 'distance',
-	    unit: 'meters',
-	    unitRounding: 0,
-	    maxValue: 3000,
-	    useRawMarkerSize: true,
-	    markerOptions: markerOptions.distance,
+	
+	'utilization': {
+	    group: 'trips',
+	    unit: '',
+	    unitRounding: 3,
+	    maxValue: 0.0001,
+	    useRawMarkerSize: false,
+	    markerOptions: markerOptions.data,
   	    draw: function() {
-	        removeMarkers();
-    	    showStations();
-	        showStationStatistic('distance-all', ['min', 'mean', 'max']);
-        },
-        
+    	    removeMarkers();
+            showStations();
+            showStationStatistic('utilization', ['utilization']);
+      	},
+      	
   	    queryResults: function() { 
-            
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
 
-            var min = DataSource.query(cachedDataSource, "stationStart", "distance", "min");
-            var mean = DataSource.query(cachedDataSource, "stationStart", "distance", "mean");
-            var max = DataSource.query(cachedDataSource, "stationStart", "distance", "max");
-            
-            var description = '<div class="results_title">Min/Mean/Max Distance Traveled</div>';
-            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
-                if (min[station] === undefined) { 
-                    description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": no rides during this period</div>";
-                            
-                } else {
-                    description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": " + 
-                            Math.round(min[station], 0) + "/" + 
-                            Math.round(mean[station], 0) + "/" + 
-                            Math.round(max[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
-                }
-            });
-            
-            return {'min': min, 'mean': mean, 'max': max, 'description': description};
-        }	
-	},
+            // save the current set of filters
+            var selectedFiltersMainQuery = $.extend(true, {}, selectedFilters);
 
-	'distance-min': {
-	    group: 'distance',	
-	    unit: 'meters',
-	    unitRounding: 0,
-	    maxValue: 3000,
-	    useRawMarkerSize: true,
-	    markerOptions: markerOptions.distance,
-  	    draw: function() {
-	        removeMarkers();
-    	    showStations();
-	        showStationStatistic('distance-min', ['min']);
-        },
+            var results = {};
+            
+            //---PEAK START+STOP CALCULATION
+            // determine the peak hourly usage ever observed for each station
+            // widen the filter to select all months, days, and hours for the current year
+            selectedFilters['startMonth'] = null;
+            selectedFilters['startWeekday'] = null;
+            selectedFilters['startHour'] = null;
         
-  	    queryResults: function() { 
-            
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
-
-            var min = DataSource.query(cachedDataSource, "stationStart", "distance", "min");
-            
-            var description = '<div class="results_title">Minimum Distance Traveled</div>';
-            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
-                if (min[station] === undefined) { 
-                    description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": no rides during this period</div>";
-                            
-                } else {
-                    description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": " + 
-                            Math.round(min[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
-                }
-            });
-            
-            return {'min': min, 'description': description};
-        }	
-	},
-
-	'distance-mean': {
-	    group: 'distance',	
-	    unit: 'meters',
-	    unitRounding: 0,
-	    maxValue: 3000,
-	    useRawMarkerSize: true,
-	    markerOptions: markerOptions.distance,
-  	    draw: function() {
-	        removeMarkers();
-    	    showStations();
-	        showStationStatistic('distance-mean', ['mean']);
-        },
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour']);
         
-  	    queryResults: function() { 
-            
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
+            var utilization = DataSource.query(
+                cachedDataSource,
+                null,                                       // group by
+                function(trip) { return trip; },            // what to aggregate (can be any field name), or null to count results
+                {
+                    ingest: function(v, trip) {
+                        if (!v) {
+                            v = {};
+                        }
 
-            var mean = DataSource.query(cachedDataSource, "stationStart", "distance", "mean");
-            
-            var description = '<div class="results_title">Mean Distance Traveled</div>';
-            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
-                if (mean[station] === undefined) { 
-                    description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                        var startStation = DataSource.FIELDS.stationStart(trip);
+                        var endStation = DataSource.FIELDS.stationEnd(trip);
+                        
+                        // time key: year+month+weekday+hour
+                        var key = trip >> 16 & 0x7FFF;
+
+                        if (startStation in v) {
+                            v[startStation][key] = 1 + (v[startStation][key] || 0);
+                        } else {
+                            v[startStation] = {key: 1};
+                        }
+
+                        if (endStation in v) {
+                            v[endStation][key] = 1 + (v[endStation][key] || 0);
+                        } else {
+                            v[endStation] = {key: 1};
+                        }
+                        
+                        return v;
+                    },
+                    
+                    finalize: function(v) {
+                    
+                        var result = {};
+                                    
+                        Object.keys(v).forEach(function(station) {
+
+                            if (selectedFiltersMainQuery['stationStart'] == null || selectedFiltersMainQuery['stationStart'][station]) {
+    
+                                result[station] = {'max': -Infinity, 'matchedCounts': []};
+
+                                Object.keys(v[station]).forEach(function(time) {
+
+                                    // add these counts if they match the main query
+                                    var trip = time << 16;
+
+                                    var startMonth = selectedFiltersMainQuery['startMonth'] == null ?
+                                        true : selectedFiltersMainQuery['startMonth'][DataSource.FIELDS.startMonth(trip)];
+                                                 
+                                    var startWeekday = selectedFiltersMainQuery['startWeekday'] == null ?
+                                        true : selectedFiltersMainQuery['startWeekday'][DataSource.FIELDS.startWeekday(trip)];
+
+                                    var startHour = DataSource.FIELDS.startHour(trip);
+                                    var startHourSelected = selectedFiltersMainQuery['startHour'] == null ?
+                                        true : selectedFiltersMainQuery['startHour'][startHour];
+
+                                    // update the peak start+stop trips observed
+                                    result[station]['max'] = Math.max(result[station]['max'], v[station][time]);
                             
-                } else {
-                    description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": " + 
-                            Math.round(mean[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+                                    if (startMonth && startWeekday && startHourSelected) {
+                                        if (!result[station]['matchedCounts'][startHour]) {
+                                            result[station]['matchedCounts'][startHour] = v[station][time];
+                                        } else {
+                                            result[station]['matchedCounts'][startHour] += v[station][time];
+                                        }
+                                    }                                    
+                                
+                                });
+                            }
+                        });
+                                            
+                        return result;
+                    }
                 }
-            });
-            
-            return {'mean': mean, 'description': description};
-        }	
-	},
+            );
 
-	'distance-max': {
-        group: 'distance',
-	    unit: 'meters',
-	    unitRounding: 0,
-	    maxValue: 3000,
-	    useRawMarkerSize: true,
-	    markerOptions: markerOptions.distance,
-  	    draw: function() {
-	        removeMarkers();
-    	    showStations();
-	        showStationStatistic('distance-max', ['max']);
-        },
-        
-  	    queryResults: function() { 
-            
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
+            // restore single-station filter
+            selectedFilters = selectedFiltersMainQuery;
 
-            var max = DataSource.query(cachedDataSource, "stationStart", "distance", "max");
+            // calculate utilization
+            var numberOfDays = selectedFilters['startWeekday'] == null ? 7 : Object.keys(selectedFilters['startWeekday']).length;           
+            numberOfDays = selectedFilters['startMonth'] == null ? numberOfDays * 52 : numberOfDays * (52 / 4);
             
-            var description = '<div class="results_title">Max Distance Traveled</div>';
-            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
-                if (mean[station] === undefined) { 
-                    description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": no rides during this period</div>";
-                            
-                } else {
-                    description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": " + 
-                            Math.round(mean[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+            var numberOfHours = selectedFilters['startHour'] == null ? 24 : Object.keys(selectedFilters['startHour']).length;
+            
+            var results = {'averages': {}, 'plots': {}};
+            Object.keys(utilization).forEach(function(station) {
+
+                // in the peak hourly usage aggregation, we are aggregating across the 
+                // same weekday in every month
+                // we need to divide by 4 to estimate a single day's contribution
+                utilization[station]['max'] /= 4;                
+                results['averages'][station] = 0;
+
+                if (!results['plots'][station]) {
+                    results['plots'][station] = [];
                 }
-            });
-            
-            return {'max': max, 'description': description};
-        }	
-	},
 
-    'popular': {
-        group: 'popular',
+                utilization[station]['matchedCounts'].forEach(function(hourlyCount) {
+                    results['averages'][station] += hourlyCount;
+                    results['plots'][station].push(hourlyCount / (numberOfDays * utilization[station]['max']));
+                });
+                
+                results['averages'][station] /= (utilization[station]['max'] * numberOfDays * numberOfHours);
+            });
+
+            /*
+            Highcharts.chart('js_chart', {
+
+                title: {
+                    text: 'Station Capacity Utilization'
+                },
+
+                xAxis: {
+                    title: {
+                        text: 'Time'
+                    }
+                },
+
+                yAxis: {
+                    max: 1,
+                    title: {
+                        text: 'Percentage of capacity'
+                    }
+                },
+
+                plotOptions: {
+                    series: {
+                        pointStart: 0
+                    }
+                },
+
+                series: [{
+                    name: 'Utilization',
+                    data: results['plots'][106],
+                }]
+
+            });  
+            */       
+              
+            var description = '<div class="results_title">Mean capacity utilization</div>';
+            description += printTopStations(results['averages'], true, maxStations, true, '(utilization estimated as a percentage of the peak observed hourly number of start+stops)');
+    
+            var kMeansResults = getClusters(results['averages'], kMeansNumberOfClusters);
+                
+            return {'utilization': results['averages'], 'description': description,
+                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
+        }
+	},
+	
+    'popular-trips': {
+        group: 'trips',
 	    unit: 'trips',
 	    unitRounding: 0,
 	    maxValue: 1,
@@ -614,12 +656,12 @@ var illustrations = {
   	    draw: function() {
                 removeMarkers();
         	    showStations();
-      	        showStationStatistic('popular', ['direction']);
+      	        showStationStatistic('popular-trips', ['direction']);
         },
 
   	    queryResults: function() {
 
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart']);
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
 
             var results = DataSource.query(
                 cachedDataSource,
@@ -661,16 +703,176 @@ var illustrations = {
             
             return {'direction': topStations, 'description': description};
         }       
-    }
+    },	
+
+	'distance-all': {
+	    group: 'distance',
+	    unit: 'meters',
+	    unitRounding: 0,
+	    maxValue: 3000,
+	    useRawMarkerSize: true,
+	    markerOptions: markerOptions.distance,
+  	    draw: function() {
+	        removeMarkers();
+    	    showStations();
+	        showStationStatistic('distance-all', ['min', 'mean', 'max']);
+        },
+        
+  	    queryResults: function() { 
+            
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
+
+            var min = DataSource.query(cachedDataSource, "stationStart", "distance", "min");
+            var mean = DataSource.query(cachedDataSource, "stationStart", "distance", "mean");
+            var max = DataSource.query(cachedDataSource, "stationStart", "distance", "max");
+            
+            var description = '<div class="results_title">Min/Mean/Max Distance Traveled</div>';
+            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
+                if (min[station] === undefined) { 
+                    description += '<div class="results_group">' + 
+                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                            
+                } else {
+                    description += '<div class="results_group">' + 
+                            hubway.stations[station]['name'] + ": " + 
+                            Math.round(min[station], 0) + "/" + 
+                            Math.round(mean[station], 0) + "/" + 
+                            Math.round(max[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+                }
+            });
+                        
+            return {'min': min, 'mean': mean, 'max': max, 'description': description};
+        }	
+	},
+
+	'distance-min': {
+	    group: 'distance',	
+	    unit: 'meters',
+	    unitRounding: 0,
+	    maxValue: 3000,
+	    useRawMarkerSize: true,
+	    markerOptions: markerOptions.distance,
+  	    draw: function() {
+	        removeMarkers();
+    	    showStations();
+	        showStationStatistic('distance-min', ['min']);
+        },
+        
+  	    queryResults: function() { 
+            
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
+
+            var min = DataSource.query(cachedDataSource, "stationStart", "distance", "min");
+            
+            var description = '<div class="results_title">Minimum Distance Traveled</div>';
+            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
+                if (min[station] === undefined) { 
+                    description += '<div class="results_group">' + 
+                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                            
+                } else {
+                    description += '<div class="results_group">' + 
+                            hubway.stations[station]['name'] + ": " + 
+                            Math.round(min[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+                }
+            });
+
+            var kMeansResults = getClusters(min, kMeansNumberOfClusters);
+            
+            return {'min': min, 'description': description,
+                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
+            
+        }	
+	},
+
+	'distance-mean': {
+	    group: 'distance',	
+	    unit: 'meters',
+	    unitRounding: 0,
+	    maxValue: 3000,
+	    useRawMarkerSize: true,
+	    markerOptions: markerOptions.distance,
+  	    draw: function() {
+	        removeMarkers();
+    	    showStations();
+	        showStationStatistic('distance-mean', ['mean']);
+        },
+        
+  	    queryResults: function() { 
+            
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
+
+            var mean = DataSource.query(cachedDataSource, "stationStart", "distance", "mean");
+            
+            var description = '<div class="results_title">Mean Distance Traveled</div>';
+            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
+                if (mean[station] === undefined) { 
+                    description += '<div class="results_group">' + 
+                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                            
+                } else {
+                    description += '<div class="results_group">' + 
+                            hubway.stations[station]['name'] + ": " + 
+                            Math.round(mean[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+                }
+            });
+            
+            var kMeansResults = getClusters(mean, kMeansNumberOfClusters);    
+            
+            return {'mean': mean, 'description': description,
+                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
+
+        }	
+	},
+
+	'distance-max': {
+        group: 'distance',
+	    unit: 'meters',
+	    unitRounding: 0,
+	    maxValue: 3000,
+	    useRawMarkerSize: true,
+	    markerOptions: markerOptions.distance,
+  	    draw: function() {
+	        removeMarkers();
+    	    showStations();
+	        showStationStatistic('distance-max', ['max']);
+        },
+        
+  	    queryResults: function() { 
+            
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
+
+            var max = DataSource.query(cachedDataSource, "stationStart", "distance", "max");
+            
+            var description = '<div class="results_title">Max Distance Traveled</div>';
+            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
+                if (max[station] === undefined) { 
+                    description += '<div class="results_group">' + 
+                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                            
+                } else {
+                    description += '<div class="results_group">' + 
+                            hubway.stations[station]['name'] + ": " + 
+                            Math.round(max[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+                }
+            });
+            
+            var kMeansResults = getClusters(max, kMeansNumberOfClusters);
+            
+            return {'max': max, 'description': description,
+                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
+            
+        }	
+	}
 };
 
 // cluster results with the following format: [{station: number}]
 // returns a hash of cluster assignments by station and the corresponding centroid values
-function getClusters(results, numberOfClusters) {
+function getClusters(results, numberOfClusters) {            
             
     var stationsAsArray = Object.keys(results).map(function(station) { return station; });
     var kMeansInput = stationsAsArray.map(function(station) { return [results[station]]; });
-    var kMeansResult = kMeans.run(kMeansInput, 5);
+    var kMeansResult = kMeans.run(kMeansInput, numberOfClusters);
     
     var clusters = {};
     for (var index in stationsAsArray) {
@@ -711,8 +913,10 @@ function printTopStations(resultsByStation, sortByDescending, max, printCounts, 
         description += "<li>" + hubway.stations[station]['name'];
         
         if (printCounts) {
+            var scale = Math.pow(10, illustrations[activeStatistic]['unitRounding']);
+            
             description += ", " + 
-                Math.round(resultsByStation[station], illustrations[activeStatistic]['unitRounding']) + 
+                Math.round(resultsByStation[station] * scale) / scale + 
                 " " + illustrations[activeStatistic]['unit'];
         }
         
@@ -959,7 +1163,8 @@ function showStationStatistic(forStatistic, properties) {
                     return;
                 } 
                 
-                var description = station['name'] + ", " + Math.round(markerSize, 1) + " " + illustrations[forStatistic]['unit'];
+                var scale = Math.pow(10, illustrations[forStatistic]['unitRounding']);                
+                var description = station['name'] + ", " + Math.round(markerSize * scale) / scale + " " + illustrations[forStatistic]['unit'];
 
                 var useRawMarkerSize = illustrations[forStatistic].useRawMarkerSize;
                 var options = illustrations[forStatistic].markerOptions;
@@ -1172,7 +1377,7 @@ jQuery(function($) {
 	$("#js_stations_reset").on("click", function() {
 	    removeMarkers();
 	    activeStatistic = undefined;
-	    selectedFilters['stationStart'] = {};
+	    selectedFilters['stationStart'] = {'-1': true};
 	    showStations();
 	    $(".js_query").removeClass("active");	    
 	    $("#js_description").html('<div class="results_title">No Selected Bike Stations</div>');
@@ -1192,7 +1397,21 @@ jQuery(function($) {
 	        setTimeout(function() { illustrations[activeStatistic].draw(); }, 0);
 	    }
 	});
+	
+	// set up clusters dropdown
+    kMeansGroups.forEach(function(label) {
 
+        var id = "js_kMeansGroups_" + label;
+        $("#js_kMeansGroups").append("<li><a id='" + id + "' class='disabled'>" + label + "</a></li>");
+
+        $("#"+id).on("click", function() {            
+            kMeansNumberOfClusters = label;
+            
+            if (activeStatistic) {
+    	        setTimeout(function() { illustrations[activeStatistic].draw(); }, 0);            
+            }
+        });
+    });
 	
 	// lay out queries
 	var currentGroup;
@@ -1225,6 +1444,7 @@ jQuery(function($) {
         'js_season_all':true,
         'js_week_all':true,
         'js_day_all':true,
-        'js_member_all':true
+        'js_member_all':true,
+        'js_gender_all':true
     });
 });
