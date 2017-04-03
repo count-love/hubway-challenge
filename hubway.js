@@ -1,14 +1,19 @@
-// global variables
+//---CONSTANTS
+// when the map zoom level is less than MIN_ZOOM_DEFAULT_MARKER, enforce a minimum marker size
+var MIN_ZOOM_DEFAULT_MARKER = 13;
+
+//---GLOBALS
 var map;
-var hubway = {};
+var Hubway = {};
 var activeMarkers = {};
 var activeStatistic;
 var clusters = {};
 var cachedDataSource;
 var cacheKey = '';
+var illustrationCache = {};
 var reset = false;
 var selectAllStations = false;
-var kMeansNumberOfClusters = 5;
+var kMeansNumberOfClusters = 0;
 
 // store the active set of selected filters;
 // by default, we start with the filters specified below (and a few default stations after the map loads)
@@ -23,7 +28,7 @@ var selectedFilters = {
 };
    
 var markerOptions = {
-    'distance': {'stroke': false, 'fillOpacity': 0.1, 'pane': 'data'},
+    'distance': {'stroke': false, 'fillOpacity': 0.15, 'pane': 'data'},
     'vector': { 'stroke': 'blue', 'fillColor': 'none', 'fillOpacity': 0.2, 'pane': 'data'},
     'data': {'stroke': false, 'fillOpacity': 0.5, 'pane': 'data'},
     'default': {'stroke': false, 'fillOpacity': 0.5},
@@ -37,7 +42,6 @@ var markerOptions = {
 var maxStations = 5;
 
 var defaultMarkerRadius = 100;
-var defaultStatisticRadius = 2000;
 var cssColors = ['blue','navy','maroon','gray','maroon','lime','green','teal','aqua','antiquewhite','aquamarine','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
 // 'purple','fuchsia', 'white','olive','yellow','black','silver','red','azure'
 
@@ -102,7 +106,7 @@ var stationGroups = [
     {'label': 'Somerville', stops: [176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 189, 195]}    
 ];
 
-var kMeansGroups = [0, 5, 10, 20, 40];
+var kMeansGroups = [0, 5, 10, 20];
 
 //--- kMeans clustering code, inspired by
 // https://burakkanber.com/blog/machine-learning-k-means-clustering-in-javascript-part-1/
@@ -162,6 +166,9 @@ var kMeans = {
                 var sum = 0;
 
                 for (var dimension in point) {
+                    if (isNaN(point[dimension])) {
+                        continue;
+                    }
                     var difference = point[dimension] - mean[dimension];
                     difference *= difference;
                     sum += difference;
@@ -173,7 +180,7 @@ var kMeans = {
 
             assignments[i] = distances.indexOf(Math.min.apply(Math, distances));
         }
-        
+
         return assignments;
     },
     
@@ -309,13 +316,11 @@ var kMeans = {
     }
 };
 
-
-// create a hash of filters to use to run a DataSource query
-// valid fields: duration, gender, member, startMinute, startYear, startMonth, startWeekday, startHour, stationEnd, stationStart
-function updateCache(options) {
-
-    // generate key
+// generate key for query cache
+function getFilterCacheKey(options) {
+        
     var key = '';
+        
     options.forEach(function(filter) {
         key += filter;
 
@@ -328,9 +333,17 @@ function updateCache(options) {
             });
         }
     });
-        
+  
+    return key;
+}
+
+// create a hash of filters to use to run a DataSource query
+// valid fields: duration, gender, member, startMinute, startYear, startMonth, startWeekday, startHour, stationEnd, stationStart
+function updateCache(options) {
+
+    var key = getFilterCacheKey(options);
+    
     if (key != cacheKey) {
-        console.log("Updating cache: %s", key);
         cachedDataSource = DataSource.cacheFilter(getFilterOptions(options));    
         cacheKey = key;
     }
@@ -342,7 +355,7 @@ function getFilterOptions(options) {
     
     options.forEach(function(column) {
         if (column == 'stationStart' || column == 'stationEnd') {
-            if (Object.keys(hubway.stations).length == Object.keys(selectedFilters.stationStart).length) {
+            if (Object.keys(Hubway.stations).length == Object.keys(selectedFilters.stationStart).length) {
                 filter[column] = null;
             } else {
                 filter[column] = Object.keys(selectedFilters[column]);
@@ -359,14 +372,15 @@ var illustrations = {
 
 	'starts': {
 	    group: 'trips',
-	    unit: 'trips/day',
+	    unit: ' trips/day',
 	    unitRounding: 0,
-	    maxValue: 50,
+	    markerScale: 5,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
+	    clusteringEnabled: true,
   	    draw: function() {
     	    removeMarkers();
-  	        showStationStatistic('starts', ['trips']);
+        	showStationStatistic('starts', ['trips']);
         },
 
   	    queryResults: function() { 
@@ -379,19 +393,16 @@ var illustrations = {
             // 2. multiply by the number of weeks in a month, and then the number of months (either all, or 4 for a season)
             var totalNumberOfDays = (selectedFilters['day'] == null ? 7 : selectedFilters['startWeekday'].length);
             totalNumberOfDays = totalNumberOfDays * 4 * (selectedFilters['startMonth'] == null ? 12 : 4);
-                        
+                 
             Object.keys(results).forEach(function(station) {
                 results[station] /= totalNumberOfDays;
             });
-            
-            kMeansResults = getClusters(results, kMeansNumberOfClusters);
-            
-            var description = '<div class="results_title">Number of trips started from each station</div>';
+                        
+            var description = '<div class="results_title">Average trips/day started from each station</div>';
             description += printTopStations(results, true, maxStations, true, 'Stations with the most trips:');
             description += printTopStations(results, false, maxStations, true, 'Stations with the fewest trips:');
 
-            return {'trips': results, 'description': description,
-                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
+            return {'trips': results, 'description': description};
         }
 	},
 	
@@ -399,9 +410,10 @@ var illustrations = {
 	    group: 'trips',
 	    unit: 'trips/day',
 	    unitRounding: 0,
-	    maxValue: 50,
+	    markerScale: 5,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
+	    clusteringEnabled: true,	    
   	    draw: function() {
     	    removeMarkers();
   	        showStationStatistic('stops', ['trips']);
@@ -409,8 +421,16 @@ var illustrations = {
 
   	    queryResults: function() { 
             
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
+            // save the current set of filters            
+            var selectedFiltersMainQuery = $.extend(true, {}, selectedFilters);
+            selectedFilters['stationEnd'] = $.extend(true, {}, selectedFilters['stationStart']);
+            selectedFilters['stationStart'] = {};
+
+            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationEnd', 'member', 'gender']);
             var results = DataSource.query(cachedDataSource, "stationEnd", null, "sum");
+            
+            // restore the original filter
+            selectedFilters = $.extend(true, {}, selectedFiltersMainQuery);
 
             // just an approximation... 
             // 1. get the number of days of the week
@@ -421,15 +441,12 @@ var illustrations = {
             Object.keys(results).forEach(function(station) {
                 results[station] /= totalNumberOfDays;
             });
-            
-            kMeansResults = getClusters(results, kMeansNumberOfClusters);            
-            
+                        
             var description = '<div class="results_title">Number of trips ending at each station</div>';
             description += printTopStations(results, true, maxStations, true, 'Stations with the most trips:');
             description += printTopStations(results, false, maxStations, true, 'Stations with the fewest trips:');
-            
-            return {'trips': results, 'description': description,
-                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
+
+            return {'trips': results, 'description': description};            
         }
 	},
 	    
@@ -437,12 +454,13 @@ var illustrations = {
 	    group: 'trips',
 	    unit: 'minutes',
 	    unitRounding: 1,
-	    maxValue: 10,
+	    markerScale: 1,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
+	    clusteringEnabled: true,	    
   	    draw: function() {
     	    removeMarkers();
-            showStationStatistic('duration', ['duration']);
+    	    showStationStatistic('duration', ['duration']);
       	},
       	
   	    queryResults: function() { 
@@ -455,15 +473,12 @@ var illustrations = {
                 "duration",     // what to aggregate (can be any field name), or null to count results
                 "mean"          // how to aggregate (can be sum, min, max or mean)
             );
-
-            kMeansResults = getClusters(results, kMeansNumberOfClusters);
             
             var description = '<div class="results_title">Average duration of trips started at each station</div>';
             description += printTopStations(results, true, maxStations, true, 'Stations with the longest average trip:');
             description += printTopStations(results, false, maxStations, true, 'Stations with the shortest average trip:');
-            
-            return {'duration': results, 'description': description,
-                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};            
+
+            return {'duration': results, 'description': description};
         }
 	},
 	
@@ -471,12 +486,12 @@ var illustrations = {
 	    group: 'trips',
 	    unit: '',
 	    unitRounding: 3,
-	    maxValue: 0.0001,
+	    markerScale: 0.00001,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
+	    clusteringEnabled: true,	    
   	    draw: function() {
-    	    removeMarkers();
-            showStations();
+  	        removeMarkers();
             showStationStatistic('utilization', ['utilization']);
       	},
       	
@@ -638,25 +653,24 @@ var illustrations = {
               
             var description = '<div class="results_title">Mean capacity utilization</div>';
             description += printTopStations(results['averages'], true, maxStations, true, '(utilization estimated as a percentage of the peak observed hourly number of start+stops)');
-    
-            var kMeansResults = getClusters(results['averages'], kMeansNumberOfClusters);
-                
-            return {'utilization': results['averages'], 'description': description,
-                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
+                    
+            return {'utilization': results['averages'], 'description': description};
         }
 	},
 	
-    'popular-trips': {
+    'popular-routes': {
         group: 'trips',
+        buttonName: 'popular routes',
 	    unit: 'trips',
 	    unitRounding: 0,
-	    maxValue: 1,
+	    markerScale: 1,
 	    useRawMarkerSize: true,
 	    markerOptions: markerOptions.vector,
+	    clusteringEnabled: false,	    
   	    draw: function() {
                 removeMarkers();
-        	    showStations();
-      	        showStationStatistic('popular-trips', ['direction']);
+            	showStations();
+          	    showStationStatistic('popular-routes', ['direction']);
         },
 
   	    queryResults: function() {
@@ -696,7 +710,7 @@ var illustrations = {
                 
                 topStations[station] = sortedKeys.slice(0, maxStations);
                 
-                var from = '<strong>From:</strong> ' + hubway.stations[station]['name'];
+                var from = '<strong>From:</strong> ' + Hubway.stations[station]['name'];
                 description += printTopStations(resultsByStation[station], true, maxStations, true, from);
 
             });
@@ -709,9 +723,9 @@ var illustrations = {
 	    group: 'distance',
 	    unit: 'meters',
 	    unitRounding: 0,
-	    maxValue: 3000,
 	    useRawMarkerSize: true,
 	    markerOptions: markerOptions.distance,
+	    clusteringEnabled: false,	    
   	    draw: function() {
 	        removeMarkers();
     	    showStations();
@@ -730,11 +744,11 @@ var illustrations = {
             Object.keys(selectedFilters['stationStart']).forEach(function(station) {
                 if (min[station] === undefined) { 
                     description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                            Hubway.stations[station]['name'] + ": no rides during this period</div>";
                             
                 } else {
                     description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": " + 
+                            Hubway.stations[station]['name'] + ": " + 
                             Math.round(min[station], 0) + "/" + 
                             Math.round(mean[station], 0) + "/" + 
                             Math.round(max[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
@@ -749,9 +763,9 @@ var illustrations = {
 	    group: 'distance',	
 	    unit: 'meters',
 	    unitRounding: 0,
-	    maxValue: 3000,
 	    useRawMarkerSize: true,
 	    markerOptions: markerOptions.distance,
+	    clusteringEnabled: true,	    
   	    draw: function() {
 	        removeMarkers();
     	    showStations();
@@ -768,20 +782,16 @@ var illustrations = {
             Object.keys(selectedFilters['stationStart']).forEach(function(station) {
                 if (min[station] === undefined) { 
                     description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                            Hubway.stations[station]['name'] + ": no rides during this period</div>";
                             
                 } else {
                     description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": " + 
+                            Hubway.stations[station]['name'] + ": " + 
                             Math.round(min[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
                 }
             });
-
-            var kMeansResults = getClusters(min, kMeansNumberOfClusters);
             
-            return {'min': min, 'description': description,
-                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
-            
+            return {'min': min, 'description': description};
         }	
 	},
 
@@ -789,9 +799,9 @@ var illustrations = {
 	    group: 'distance',	
 	    unit: 'meters',
 	    unitRounding: 0,
-	    maxValue: 3000,
 	    useRawMarkerSize: true,
 	    markerOptions: markerOptions.distance,
+	    clusteringEnabled: true,	    
   	    draw: function() {
 	        removeMarkers();
     	    showStations();
@@ -808,20 +818,16 @@ var illustrations = {
             Object.keys(selectedFilters['stationStart']).forEach(function(station) {
                 if (mean[station] === undefined) { 
                     description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                            Hubway.stations[station]['name'] + ": no rides during this period</div>";
                             
                 } else {
                     description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": " + 
+                            Hubway.stations[station]['name'] + ": " + 
                             Math.round(mean[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
                 }
             });
-            
-            var kMeansResults = getClusters(mean, kMeansNumberOfClusters);    
-            
-            return {'mean': mean, 'description': description,
-                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
-
+                
+            return {'mean': mean, 'description': description};
         }	
 	},
 
@@ -829,9 +835,9 @@ var illustrations = {
         group: 'distance',
 	    unit: 'meters',
 	    unitRounding: 0,
-	    maxValue: 3000,
 	    useRawMarkerSize: true,
 	    markerOptions: markerOptions.distance,
+	    clusteringEnabled: true,	    
   	    draw: function() {
 	        removeMarkers();
     	    showStations();
@@ -848,11 +854,11 @@ var illustrations = {
             Object.keys(selectedFilters['stationStart']).forEach(function(station) {
                 if (max[station] === undefined) { 
                     description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": no rides during this period</div>";
+                            Hubway.stations[station]['name'] + ": no rides during this period</div>";
                             
                 } else {
                     description += '<div class="results_group">' + 
-                            hubway.stations[station]['name'] + ": " + 
+                            Hubway.stations[station]['name'] + ": " + 
                             Math.round(max[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
                 }
             });
@@ -910,7 +916,7 @@ function printTopStations(resultsByStation, sortByDescending, max, printCounts, 
     var description = '<div class="results_group">' + title + '<br><ol>';
 
     sortedKeys.forEach(function(station) {
-        description += "<li>" + hubway.stations[station]['name'];
+        description += "<li>" + Hubway.stations[station]['name'];
         
         if (printCounts) {
             var scale = Math.pow(10, illustrations[activeStatistic]['unitRounding']);
@@ -980,9 +986,7 @@ function setupFilters(defaults) {
                 $(".js_"+group).removeClass('active');
                 $(this).addClass('active');
             
-                if (activeStatistic !== undefined) {
-          	        setTimeout(function() { illustrations[activeStatistic].draw(); }, 0);
-                }            
+                redraw();
             });
             
             // make button active if it is the default
@@ -1008,9 +1012,9 @@ function refreshQueryButtons(query) {
 // add station markers
 function showStations() {
 
-    Object.keys(hubway.stations).forEach(function(id) {
+    Object.keys(Hubway.stations).forEach(function(id) {
     
-        var row = hubway.stations[id];
+        var row = Hubway.stations[id];
         
         var description = row.name + ', ' + row['docks'] + ' bikes';        
         marker = addMarker(row.latitude, row.longitude, description, "default", defaultMarkerRadius, markerOptions.default);
@@ -1021,7 +1025,7 @@ function showStations() {
         marker.on('mouseout', function (e) { this.closePopup(); });
 
         // add a reference to the original data
-        hubway.stations[id]['marker'] = marker;                
+        Hubway.stations[id]['marker'] = marker;                
                         
         if (selectedFilters['stationStart'][row.id]) {
             selectedFilters['stationStart'][row.id] = {'row': row, 'marker': marker};
@@ -1043,14 +1047,15 @@ function showStations() {
 function selectStation(id) {
 
     reset = false;
+    delete selectedFilters.stationStart[-1];
 
-    var marker = hubway.stations[id]['marker'];
+    var marker = Hubway.stations[id]['marker'];
                 
-    selectedFilters['stationStart'][id] = {'row': hubway.stations[id], 'marker': marker};
+    selectedFilters['stationStart'][id] = {'row': Hubway.stations[id], 'marker': marker};
     marker.setStyle(markerOptions.stationSelected);
 
-    if (activeStatistic !== undefined && !selectAllStations) {
-        setTimeout(function() { illustrations[activeStatistic].draw(); }, 0);
+    if (!selectAllStations) {
+        redraw();
     }
     
     displaySelectedStationsText();    
@@ -1059,13 +1064,13 @@ function selectStation(id) {
 // remove a particular station
 function removeStation(id) {
     
-    var marker = hubway.stations[id]['marker'];
+    var marker = Hubway.stations[id]['marker'];
     marker.setStyle(markerOptions.stationUnselected);
 
     delete selectedFilters['stationStart'][id];
     
-    if (activeStatistic !== undefined && !selectAllStations) {
-        setTimeout(function() { illustrations[activeStatistic].draw(); }, 0);
+    if (!selectAllStations) {
+        redraw();
     }           
     
     displaySelectedStationsText();         
@@ -1077,7 +1082,7 @@ function displaySelectedStationsText() {
     var description = '<div class="results_title">Selected stations:</div><div class="results_group">';
     
     Object.keys(selectedFilters['stationStart']).forEach(function(station) {
-        description += hubway.stations[station]['name'] + '<br>';
+        description += Hubway.stations[station]['name'] + '<br>';
     });
     
     description += '</div>'
@@ -1090,8 +1095,6 @@ function displaySelectedStationsText() {
 
 //---BEGIN MAP DRAWING FUNCTIONS
 function showStationStatistic(forStatistic, properties) {
-
-	var loading = createLoadingOverlay("#map");
     
     // always remove the data layer to update it
     if (activeMarkers['data']) {
@@ -1100,29 +1103,55 @@ function showStationStatistic(forStatistic, properties) {
         });
     }
 
-    var queryResults = illustrations[forStatistic].queryResults();
+    // try to grab results from the cache first
+    var cacheKey = "illustration_" + forStatistic + kMeansNumberOfClusters + getFilterCacheKey(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
     
-    // if clustering data is available, assign colors sorted by the first dimension
-    if (queryResults['clusterMeans']) {
+    var queryResults, meansSorted, means;
+    if (illustrationCache[cacheKey]) {
+        queryResults = illustrationCache[cacheKey];
+        meansSorted = queryResults['clusterMeansSorted'];
+        means = queryResults['clusterMeansOriginalArray'];
 
-        var means = [];
-        var meansSorted = [];
+    } else {
+    
+        queryResults = illustrations[forStatistic].queryResults();
+
+        // if clustering is enabled, assign each point to a group
+        if (kMeansNumberOfClusters && illustrations[forStatistic]['clusteringEnabled']) {
+            var clusterBy = properties[0];
+            var kMeansResults = getClusters(queryResults[clusterBy], kMeansNumberOfClusters);
         
-        queryResults['clusterMeans'].forEach(function(mean) { 
-            means.push(mean[0]);
-            meansSorted.push(mean[0]);
-        });
-                    
-        meansSorted.sort(function(a, b) { 
-            if (a < b) {
-                return -1;
-            } else if (a > b) {
-                return 1;
-            }
+            queryResults['clusters'] = kMeansResults['clusters'];
+            queryResults['clusterMeans'] = kMeansResults['means'];
             
-            return 0;
-        });
+            var means = [];
+            var meansSorted = [];
+    
+            queryResults['clusterMeans'].forEach(function(mean) { 
+                means.push(mean[0]);
+                meansSorted.push(mean[0]);
+            });
+                
+            meansSorted.sort(function(a, b) { 
+                if (a < b) {
+                    return -1;
+                } else if (a > b) {
+                    return 1;
+                }
         
+                return 0;
+            });
+            
+            queryResults['clusterMeansSorted'] = meansSorted;
+            queryResults['clusterMeansOriginalArray'] = means;
+        }
+        
+        // save results to the cache 
+        illustrationCache[cacheKey] = queryResults;
+    }
+
+    // assign clusters colors in order for consistency
+    if (kMeansNumberOfClusters && illustrations[forStatistic]['clusteringEnabled']) {
         meansSorted.forEach(function(x) {
             var index = means.indexOf(x);
             defineCluster(means.indexOf(x));
@@ -1136,14 +1165,14 @@ function showStationStatistic(forStatistic, properties) {
 
             Object.keys(queryResults[property]).forEach(function(id) {
     
-                var startStation = hubway.stations[id];
+                var startStation = Hubway.stations[id];
 
                 var maxEndStations = queryResults[property][id].length < 5 ? 
                                         queryResults[property][id].length : 5;
             
                 for (var i=0; i < maxEndStations; i++) {
                     var endStationIndex = queryResults[property][id][i];
-                    var endStation = hubway.stations[endStationIndex];
+                    var endStation = Hubway.stations[endStationIndex];
                 
                     addVector(startStation.latitude, startStation.longitude, endStation.latitude, endStation.longitude, "default");
                 };
@@ -1153,11 +1182,11 @@ function showStationStatistic(forStatistic, properties) {
         // add a marker
         else {
 
-            var maxValue = illustrations[forStatistic].maxValue;
+            var markerScale = illustrations[forStatistic].markerScale;
 
             Object.keys(queryResults[property]).forEach(function(id) {
  
-                var station = hubway.stations[id];
+                var station = Hubway.stations[id];
                 var markerSize = queryResults[property][id];
                 if (isNaN(markerSize)) {
                     return;
@@ -1170,7 +1199,12 @@ function showStationStatistic(forStatistic, properties) {
                 var options = illustrations[forStatistic].markerOptions;
         
                 if (!useRawMarkerSize) {
-                    markerSize = maxValue ? markerSize * Math.sqrt(defaultStatisticRadius / maxValue) : 0;
+                    markerSize = markerScale ? markerSize * Math.sqrt(defaultMarkerRadius / markerScale) : 0;
+                    
+                    // enforce minimum marker size                    
+                    if (map.getZoom() < MIN_ZOOM_DEFAULT_MARKER && markerSize < defaultMarkerRadius) {
+                        markerSize = defaultMarkerRadius;
+                    }
                 }
 
                 var cluster = "default";
@@ -1190,8 +1224,6 @@ function showStationStatistic(forStatistic, properties) {
            });
        }
    });
-
-   loading.remove();
    
    // add description
    $("#js_description").html(queryResults['description']);       
@@ -1303,6 +1335,16 @@ function createLoadingOverlay(obj) {
 	
 	return ret;
 }
+
+// if data is shown, redrawn it
+function redraw() {
+    if (activeStatistic) {
+
+     	var loading = createLoadingOverlay("#map");    	    
+        setTimeout(function() { illustrations[activeStatistic].draw(); loading.remove(); })
+    }
+}
+
 //---END MAP DRAWING FUNCTIONS
 
 jQuery(function($) {
@@ -1315,13 +1357,18 @@ jQuery(function($) {
 	          
 	map.createPane('data');
 	map.getPane('data').style.zIndex = 299;
+	
+	// redraw points after zoom
+	map.on('zoomend', function() {
+	    redraw();    
+	});
 	            	    
     resetMapView();
 	
 	// specify OSM tiles
 	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-		minZoom: 3,
+		minZoom: 11,
 		maxZoom: 15
 	}).addTo(map);
 	
@@ -1330,7 +1377,7 @@ jQuery(function($) {
 		.done(function() {
 		
 			// LOADED, READY TO GO
-			hubway['stations'] = DataSource.stationsByID();
+			Hubway['stations'] = DataSource.stationsByID();
 			
             // draw all station markers
             showStations();
@@ -1387,15 +1434,13 @@ jQuery(function($) {
 	$("#js_stations_select").on("click", function() {
         selectAllStations = true;
 	    selectedFilters['stationStart'] = {};
-	    Object.keys(hubway.stations).forEach(function(id) {
+	    Object.keys(Hubway.stations).forEach(function(id) {
 	        selectStation(id);
 	    });
 	    $("#js_description").html('<div class="results_title">All Bike Stations Selected</div>');
 	    selectAllStations = false;
         
-        if (activeStatistic) {	    
-	        setTimeout(function() { illustrations[activeStatistic].draw(); }, 0);
-	    }
+        redraw();
 	});
 	
 	// set up clusters dropdown
@@ -1404,12 +1449,12 @@ jQuery(function($) {
         var id = "js_kMeansGroups_" + label;
         $("#js_kMeansGroups").append("<li><a id='" + id + "' class='disabled'>" + label + "</a></li>");
 
-        $("#"+id).on("click", function() {            
+        $("#"+id).on("click", function() {   
+                 
             kMeansNumberOfClusters = label;
+            $("#js_kMeans").text("Clusters: " + kMeansNumberOfClusters);
             
-            if (activeStatistic) {
-    	        setTimeout(function() { illustrations[activeStatistic].draw(); }, 0);            
-            }
+            redraw();
         });
     });
 	
@@ -1425,7 +1470,8 @@ jQuery(function($) {
 	        $("#js_queries").append('<br>');
 	    }
 	    
-	    var button = '<button class="btn btn-default js_query" id="js_' + query + '">' + query + '</button>';
+	    var name = illustrations[query]['buttonName'] ? illustrations[query]['buttonName'] : query;
+	    var button = '<button class="btn btn-default js_query" id="js_' + query + '">' + name + '</button>';
 	    $("#js_queries").append(button);
 	    
 	    
@@ -1433,7 +1479,9 @@ jQuery(function($) {
        	    if (!reset) {
            	    refreshQueryButtons(query);
         	    activeStatistic = query;
-  	            setTimeout(function() { illustrations[query].draw(); }, 0);
+
+            	var loading = createLoadingOverlay("#map");    	    
+  	            setTimeout(function() { illustrations[query].draw(); loading.remove() }, 0);
   	        }
 	    });
 	});
@@ -1448,3 +1496,4 @@ jQuery(function($) {
         'js_gender_all':true
     });
 });
+

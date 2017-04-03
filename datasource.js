@@ -101,7 +101,7 @@
 				// notify progress
 				dfd_trips.notifyWith(that, ["downloaded-trips"]);
 				
-				var t0 = performance.now();
+				// var t0 = performance.now();
 				
 				// create data view
 				var bin = DataView ? new DataView(data) : new jDataView(data);
@@ -115,8 +115,8 @@
 					return;
 				}
 				
-				var t1 = performance.now();
-				console.log(t1 - t0);
+				// var t1 = performance.now();
+				// console.log(t1 - t0);
 				
 				// notify progress
 				dfd_trips.notifyWith(that, ["parsed-trips"]);
@@ -496,7 +496,7 @@
 		
 		// allocate distances array
 		distances = new Array(256 * 256);
-		for (i = 0; i < (stations.length - 1); ++i) {
+		for (i = 0; i < stations.length; ++i) {
 			i_id = stations[i].id;
 			
 			// set zero down diagonal
