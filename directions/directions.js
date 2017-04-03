@@ -5,9 +5,6 @@ jQuery(function($) {
 
 	// leaflet maps object
 	var map, layer;
-	
-	// disable fields
-	var disabled = $("input, button").not(":disabled").prop("disabled", true);
 
 	function loadTransitLayer(address) {
 		// remove old layer
@@ -28,8 +25,23 @@ jQuery(function($) {
 				return;
 			}
 
+			// received data
+			var grid = new Grid(received_data.grid);
+
+			// setup router
+			var router = new Router(grid);
+			router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
+
+			// add modes
+			router.addMode(new ModeMultiLookup("bike", received_data.bike, 0, 60, 1));
+			router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 90, 2));
+			router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 90, 2));
+			router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 120, 2));
+			//router.addMode(new ModeLookup("mbta_ferry", received_data.mbta_ferry, 120, 2));
+			router.addMode(new ModeWalk());
+
 			// add grid
-			layer = L.transitLayer(received_data);
+			layer = L.transitLayer(router);
 			layer.addTo(map);
 
 			// resolve
@@ -45,6 +57,7 @@ jQuery(function($) {
 	setupMap();
 
 	// load transit overlay
+	var disabled = $("input, button").not(":disabled").prop("disabled", true);
 	loadTransitLayer("../data/directions-s.json")
 		.done(function() {
 			// enable interface
@@ -83,49 +96,94 @@ jQuery(function($) {
 	}
 	
 	// add event handlers
-	$("#transit-modes").on("click", ":checkbox", function() {
+	$("#transit-source").on("click", "[data-source]", function() {
+		var $this = $(this), old_start = null;
+
+		// already selected
+		if ($this.hasClass("active")) {
+			return;
+		}
+
+		// update interface
+		// slight browser optimization?
+		$(".active").filter("[data-source]").removeClass("active");
+		$this.addClass("active");
+
+		// old start
 		if (layer) {
-			var cur_mode = this.value, enabled = !!$(this).prop("checked");
-			
-			// router...
-			layer.getRouter().getModeByName(this.value).enabled = enabled;
-			
-			// toggle bike speed options
-			if ("bike" === cur_mode) {
+			old_start = layer.getStart();
+		}
+
+		// disable everything
+		var disabled = $("input, button").not(":disabled").prop("disabled", true);
+		loadTransitLayer($this.data("source"))
+			.done(function() {
+				// enable interface
+				disabled.prop("disabled", false);
+
+				// configure
+				configureFromInterface();
+
+				// restore
+				if (old_start) {
+					layer.buildOverlay(old_start);
+				}
+			})
+			.fail(function() {
+				// TODO: write error handling
+			});
+	});
+
+	function configureFromInterface() {
+		if (!layer) return;
+
+		var refresh = false;
+
+		// set mode
+		var new_mode = $("[data-mode]").filter(".active").first().data("mode") || L.TransitLayer.MODE_MODE;
+		console.log(new_mode);
+		if (layer.getMode() !== new_mode) {
+			layer.setMode(new_mode);
+			refresh = true;
+		}
+
+		// enable modes
+		$("#transit-modes").find(":checkbox").each(function() {
+			var enabled = !!$(this).prop("checked");
+
+			var mode = layer.getRouter().getModeByName(this.value);
+			if (mode) {
+				if (mode.enabled !== enabled) {
+					mode.enabled = enabled;
+					refresh = true;
+				}
+			}
+
+			// special interface change
+			if ("bike" === this.value) {
 				$("#bike-speed")[enabled ? "show" : "hide"]("fast");
 			}
-			
-			// refresh
-			layer.refreshOverlay();
-		}
-	});
-	
-	$("#map-mode").on("click", "[data-mode]", function() {
-		var $this = $(this), new_mode = $this.data("mode");
+		});
 
-		if (layer) {
-			// no change
-			if (layer.getMode() === new_mode) {
-				return;
+
+		// bike speed
+		var speed_index = parseInt($("#bike-speed").find(":radio").filter(":checked").val(), 10);
+		var mode = layer.getRouter().getModeByName("bike");
+		if (mode) {
+			if (mode.getIndex() !== speed_index) {
+				mode.setIndex(speed_index);
+				refresh = true;
 			}
-
-			// update interface
-			// slight browser optimization?
-			$(".active").filter("[data-mode]").removeClass("active");
-			$this.addClass("active");
-
-			// set mode
-			layer.setMode(new_mode);
 		}
-	});
-	
-	$("#bike-speed").on("click", ":radio", function() {
-		if (layer) {
-			layer.getRouter().getModeByName("bike").setIndex(parseInt(this.value, 10));
-			
+
+		if (refresh) {
 			layer.refreshOverlay();
 		}
-	});
+	}
+
+	$("#transit-modes").on("click", ":checkbox", configureFromInterface);
+	$("#map-mode").on("click", "[data-mode]", configureFromInterface);
+	$("#bike-speed").on("click", ":radio", configureFromInterface);
 
 	/* BEGIN LEAFLET LAYER */
 	L.TransitLayer = L.GeoJSON.extend({
@@ -141,26 +199,14 @@ jQuery(function($) {
 			opacityMode: 0.3,
 			opacityTime: 0.6
 		},
-		initialize: function(data, options) {
+		initialize: function(router, options) {
 			// private properties
 			this._start = null;
 			this._result = false;
 			this._scale = null;
 			this._mode = L.TransitLayer.MODE_MODE;
-			this._grid = new Grid(data.grid);
-			this._router = new Router(this._grid);
-
-			// setup router
-			this._router.excludeCoordinatesAndWater(data.exclude, data.water, 0.3);
-
-			// add modes
-			// TODO: potentially generalize mode configuration to allow modes to be defined in the JSON
-			this._router.addMode(new ModeMultiLookup("bike", data.bike, 0, 60, 1));
-			this._router.addMode(new ModeLookup("mbta_bus", data.mbta_bus, 90, 2));
-			this._router.addMode(new ModeLookup("mbta_subway", data.mbta_subway, 90, 2));
-			this._router.addMode(new ModeLookup("mbta_commuter", data.mbta_commuter, 120, 2));
-			//this._router.addMode(new ModeLookup("mbta_ferry", data.mbta_ferry, 120, 2));
-			this._router.addMode(new ModeWalk());
+			this._grid = router.grid;
+			this._router = router;
 
 			// set options
 			L.setOptions(this, options);
@@ -169,6 +215,13 @@ jQuery(function($) {
 			L.GeoJSON.prototype.initialize.call(this, this._grid.toGeoJSON(), {
 				style: L.bind(this.styleCell, this)
 			});
+		},
+		getStart: function() {
+			if (this._start) {
+				// copy
+				return L.latLng(this._start.lat, this._start.lng);
+			}
+			return null;
 		},
 		getMode: function() {
 			return this._mode;
@@ -408,8 +461,12 @@ jQuery(function($) {
 	}
 	ModeMultiLookup.prototype = Object.create(Mode.prototype);
 	ModeMultiLookup.prototype.constructor = ModeMultiLookup;
-	
-	// route from... just look up in table
+
+	ModeMultiLookup.prototype.getIndex = function() {
+		return this.index;
+	};
+
+	// look up in table offset by index
 	ModeMultiLookup.prototype.setIndex = function(index) {
 		// store index
 		this.index = index;
