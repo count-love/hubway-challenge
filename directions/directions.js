@@ -6,6 +6,8 @@ jQuery(function($) {
 	// leaflet maps object
 	var map, layer;
 
+	var test_layer;
+
 	function loadTransitLayer(address) {
 		// remove old layer
 		if (layer) {
@@ -141,7 +143,6 @@ jQuery(function($) {
 
 		// set mode
 		var new_mode = $("[data-mode]").filter(".active").first().data("mode") || L.TransitLayer.MODE_MODE;
-		console.log(new_mode);
 		if (layer.getMode() !== new_mode) {
 			layer.setMode(new_mode);
 			refresh = true;
@@ -330,8 +331,72 @@ jQuery(function($) {
 			// route
 			this._result = this._router.routeFrom(start_gc);
 
+			this.testIso();
+
+
 			// draw overlay
-			this.redraw();
+			//this.redraw();
+		},
+		testIso: function() {
+			var bands = [];
+			var grid, row, i, j, k, offset;
+			for (j = 0; j < this.options.modeColors.length; ++j) {
+				// build grid
+				grid = [];
+				for (i = 0; i < this._grid.countHeight; ++i) {
+					row = [];
+					offset = this._grid.countWidth * i;
+					for (k = 0; k < this._grid.countWidth; ++k) {
+						row.push(+(this._result[offset + k][1] === j));
+					}
+					grid.push(row);
+				}
+
+				// calculate iso line
+				var band = MarchingSquaresJS.isoBands(grid, 0.5, 1);
+				bands.push({coords: band, val: j, color: this.options.modeColors[j]});
+			}
+
+			// remove test layer
+			if (test_layer) {
+				test_layer.remove();
+			}
+
+			var opacity = this.options.opacityMode;
+			var lng_start = this._grid.lngMin + (this._grid.sizeWidth * 0.5);
+			var lng_step = this._grid.sizeWidth;
+			var lat_start = this._grid.latMin + (this._grid.sizeHeight * 0.5);
+			var lat_step = this._grid.sizeHeight;
+
+			test_layer = L.d3SvgOverlay(function(selection, projection) {
+				var line = d3
+					.line()
+					.x(function(d) {
+						return projection.latLngToLayerPoint([lat_start + lat_step * d[1], lng_start + lng_step * d[0]]).x;
+					})
+					.y(function(d) {
+						return projection.latLngToLayerPoint([lat_start + lat_step * d[1], lng_start + lng_step * d[0]]).y;
+					})
+					.curve(d3.curveBasis);
+
+				selection
+					.selectAll("path")
+					.data(bands)
+					.enter()
+					.append("path")
+					.style("fill", function(d) { return d.color; })
+					.style("opacity", opacity)
+					.attr("d", function(d) {
+						var p = "";
+						for (var k = 0; k < d.coords.length; ++k) {
+							p += line(d.coords[k]) + "Z";
+						}
+						return p;
+					})
+					.exit()
+					.remove();
+			});
+			test_layer.addTo(map);
 		},
 		clearOverlay: function() {
 			this._result = false;
