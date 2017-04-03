@@ -5,9 +5,6 @@ jQuery(function($) {
 
 	// leaflet maps object
 	var map, layer;
-	
-	// disable fields
-	var disabled = $("input, button").not(":disabled").prop("disabled", true);
 
 	function loadTransitLayer(address) {
 		// remove old layer
@@ -60,6 +57,7 @@ jQuery(function($) {
 	setupMap();
 
 	// load transit overlay
+	var disabled = $("input, button").not(":disabled").prop("disabled", true);
 	loadTransitLayer("../data/directions-s.json")
 		.done(function() {
 			// enable interface
@@ -98,49 +96,84 @@ jQuery(function($) {
 	}
 	
 	// add event handlers
-	$("#transit-modes").on("click", ":checkbox", function() {
-		if (layer) {
-			var cur_mode = this.value, enabled = !!$(this).prop("checked");
-			
-			// router...
-			layer.getRouter().getModeByName(this.value).enabled = enabled;
-			
-			// toggle bike speed options
-			if ("bike" === cur_mode) {
+	$("#transit-source").on("click", "[data-source]", function() {
+		var $this = $(this);
+
+		// already selected
+		if ($this.hasClass("active")) {
+			return;
+		}
+
+		// update interface
+		// slight browser optimization?
+		$(".active").filter("[data-source]").removeClass("active");
+		$this.addClass("active");
+
+		// disable everything
+		var disabled = $("input, button").not(":disabled").prop("disabled", true);
+		loadTransitLayer($this.data("source"))
+			.done(function() {
+				// enable interface
+				disabled.prop("disabled", false);
+
+				// configure
+				configureFromInterface();
+			})
+			.fail(function() {
+				// TODO: write error handling
+			});
+	});
+
+	function configureFromInterface() {
+		if (!layer) return;
+
+		var refresh = false;
+
+		// set mode
+		var new_mode = $("[data-mode]").filter(".active").first().data("mode") || L.TransitLayer.MODE_MODE;
+		console.log(new_mode);
+		if (layer.getMode() !== new_mode) {
+			layer.setMode(new_mode);
+			refresh = true;
+		}
+
+		// enable modes
+		$("#transit-modes").find(":checkbox").each(function() {
+			var enabled = !!$(this).prop("checked");
+
+			var mode = layer.getRouter().getModeByName(this.value);
+			if (mode) {
+				if (mode.enabled !== enabled) {
+					mode.enabled = enabled;
+					refresh = true;
+				}
+			}
+
+			// special interface change
+			if ("bike" === this.value) {
 				$("#bike-speed")[enabled ? "show" : "hide"]("fast");
 			}
-			
-			// refresh
-			layer.refreshOverlay();
-		}
-	});
-	
-	$("#map-mode").on("click", "[data-mode]", function() {
-		var $this = $(this), new_mode = $this.data("mode");
+		});
 
-		if (layer) {
-			// no change
-			if (layer.getMode() === new_mode) {
-				return;
+
+		// bike speed
+		var speed_index = parseInt($("#bike-speed").find(":radio").filter(":checked").val(), 10);
+		var mode = layer.getRouter().getModeByName("bike");
+		if (mode) {
+			if (mode.getIndex() !== speed_index) {
+				mode.setIndex(speed_index);
+				refresh = true;
 			}
-
-			// update interface
-			// slight browser optimization?
-			$(".active").filter("[data-mode]").removeClass("active");
-			$this.addClass("active");
-
-			// set mode
-			layer.setMode(new_mode);
 		}
-	});
-	
-	$("#bike-speed").on("click", ":radio", function() {
-		if (layer) {
-			layer.getRouter().getModeByName("bike").setIndex(parseInt(this.value, 10));
-			
+
+		if (refresh) {
 			layer.refreshOverlay();
 		}
-	});
+	}
+
+	$("#transit-modes").on("click", ":checkbox", configureFromInterface);
+	$("#map-mode").on("click", "[data-mode]", configureFromInterface);
+	$("#bike-speed").on("click", ":radio", configureFromInterface);
 
 	/* BEGIN LEAFLET LAYER */
 	L.TransitLayer = L.GeoJSON.extend({
@@ -411,8 +444,12 @@ jQuery(function($) {
 	}
 	ModeMultiLookup.prototype = Object.create(Mode.prototype);
 	ModeMultiLookup.prototype.constructor = ModeMultiLookup;
-	
-	// route from... just look up in table
+
+	ModeMultiLookup.prototype.getIndex = function() {
+		return this.index;
+	};
+
+	// look up in table offset by index
 	ModeMultiLookup.prototype.setIndex = function(index) {
 		// store index
 		this.index = index;

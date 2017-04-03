@@ -29,6 +29,10 @@ html, body {
 	font-size: 24px
 }
 
+form > div {
+	margin-top: 20px;
+}
+
 /* extra large screens */
 @media screen and (min-width: 1200px) {
 	#map {
