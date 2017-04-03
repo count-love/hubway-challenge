@@ -97,7 +97,7 @@ jQuery(function($) {
 	
 	// add event handlers
 	$("#transit-source").on("click", "[data-source]", function() {
-		var $this = $(this);
+		var $this = $(this), old_start = null;
 
 		// already selected
 		if ($this.hasClass("active")) {
@@ -109,6 +109,11 @@ jQuery(function($) {
 		$(".active").filter("[data-source]").removeClass("active");
 		$this.addClass("active");
 
+		// old start
+		if (layer) {
+			old_start = layer.getStart();
+		}
+
 		// disable everything
 		var disabled = $("input, button").not(":disabled").prop("disabled", true);
 		loadTransitLayer($this.data("source"))
@@ -118,6 +123,11 @@ jQuery(function($) {
 
 				// configure
 				configureFromInterface();
+
+				// restore
+				if (old_start) {
+					layer.buildOverlay(old_start);
+				}
 			})
 			.fail(function() {
 				// TODO: write error handling
@@ -205,6 +215,13 @@ jQuery(function($) {
 			L.GeoJSON.prototype.initialize.call(this, this._grid.toGeoJSON(), {
 				style: L.bind(this.styleCell, this)
 			});
+		},
+		getStart: function() {
+			if (this._start) {
+				// copy
+				return L.latLng(this._start.lat, this._start.lng);
+			}
+			return null;
 		},
 		getMode: function() {
 			return this._mode;
