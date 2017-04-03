@@ -22,17 +22,8 @@
 			zoomHide: false,
 			zoomDraw: true
 		},
-		_disableLeafletRounding: function(){
-			this._leaflet_round = L.Point.prototype._round;
-			L.Point.prototype._round = function(){ return this; };
-		},
-		_enableLeafletRounding: function(){
-			L.Point.prototype._round = this._leaflet_round;
-		},
 		draw: function() {
-			this._disableLeafletRounding();
 			this._drawCallback(this.selection, this.projection, this.map.getZoom());
-			this._enableLeafletRounding();
 		},
 		initialize: function(drawCallback, options) {
 			// set options
@@ -43,7 +34,6 @@
 		},
 		// Handler for "viewreset"-like events, updates scale and shift after the animation
 		_zoomChange: function (evt) {
-			this._disableLeafletRounding();
 			var newZoom = "undefined" === typeof evt.zoom ? this.map._zoom : evt.zoom; // "viewreset" event in Leaflet has not zoom/center parameters like zoomanim
 			this._zoomDiff = newZoom - this._zoom;
 			this._scale = Math.pow(2, this._zoomDiff);
@@ -56,7 +46,6 @@
 			this._rootGroup.attr("transform", shift.concat(scale).join(""));
 
 			if (this.options.zoomDraw) { this.draw(); }
-			this._enableLeafletRounding();
 		},
 		onAdd: function (map) {
 			this.map = map;
@@ -81,7 +70,7 @@
 			this.projection = {
 				latLngToLayerPoint: function (latLng, zoom) {
 					zoom = "undefined" === typeof zoom ? _layer._zoom : zoom;
-					var projectedPoint = _layer.map.project(L.latLng(latLng), zoom)._round();
+					var projectedPoint = _layer.map.project(L.latLng(latLng), zoom);
 					return projectedPoint._subtract(_layer._pixelOrigin);
 				},
 				layerPointToLatLng: function (point, zoom) {
