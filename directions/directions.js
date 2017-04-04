@@ -182,9 +182,14 @@ jQuery(function($) {
 		}
 	}
 
-	$("#transit-modes").on("click", ":checkbox", configureFromInterface);
-	$("#map-mode").on("click", "[data-mode]", configureFromInterface);
-	$("#bike-speed").on("click", ":radio", configureFromInterface);
+	$("#map-mode").on("click", "[data-mode]", function() {
+		$(".active").filter("[data-mode]").removeClass("active");
+		$(this).addClass("active");
+
+		configureFromInterface();
+	});
+	$("#transit-modes").on("change", ":checkbox", configureFromInterface);
+	$("#bike-speed").on("change", ":radio", configureFromInterface);
 
 	/* BEGIN LEAFLET LAYER */
 	L.TransitLayer = L.GeoJSON.extend({
@@ -227,7 +232,7 @@ jQuery(function($) {
 		getMode: function() {
 			return this._mode;
 		},
-		setMode: function(mode) {
+		setMode: function(mode, refresh) {
 			switch (mode) {
 				case L.TransitLayer.MODE_MODE:
 				case L.TransitLayer.MODE_TIME:
@@ -235,7 +240,7 @@ jQuery(function($) {
 					this._mode = mode;
 
 					// refresh
-					if (this._result) {
+					if (this._result && ("undefined" === typeof refresh || false !== refresh)) {
 						this.refreshOverlay();
 					}
 
