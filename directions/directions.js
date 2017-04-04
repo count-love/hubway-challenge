@@ -343,10 +343,23 @@ jQuery(function($) {
 			//this.redraw();
 		},
 		testIso: function() {
-			var bands = [];
+			// used for line calculation
+			var lng_start = this._grid.lngMin + (this._grid.sizeWidth * 0.5);
+			var lng_step = this._grid.sizeWidth;
+			var lat_start = this._grid.latMin + (this._grid.sizeHeight * 0.5);
+			var lat_step = this._grid.sizeHeight;
+
+			// d3 line implementation
+			var line = d3.line()
+				.x(function(d) { return lat_start + lat_step * d[1]; }) // x is latitude (confusing)
+				.y(function(d) { return lng_start + lng_step * d[0]; }) // y is longitude (confusing)
+				.curve(d3.curveBasis); // interpolation curve
+
 			var grid, row, i, j, k, offset;
+			var band, context;
 			for (j = 0; j < this.options.modeColors.length; ++j) {
 				// build grid
+				// (tried rewriting MarchSquareJS to take vector input, but minimal speed up, better to keep original plugin)
 				grid = [];
 				for (i = 0; i < this._grid.countHeight; ++i) {
 					row = [];
@@ -358,50 +371,32 @@ jQuery(function($) {
 				}
 
 				// calculate iso line
-				var band = MarchingSquaresJS.isoBands(grid, 0.5, 1);
-				bands.push({coords: band, val: j, color: this.options.modeColors[j]});
+				band = MarchingSquaresJS.isoBands(grid, 0.5, 1);
+
+				// draw band
+				context = L.d3path();
+				line.context(context);
+				for (i = 0; i < band.length; ++i) {
+					line(band[i]); // draw band
+					context.closePath(); // close path
+				}
+
+				// create curve
+				var curve = L.curve(context.toArray(), {
+					// stroke
+					stroke: true,
+					weight: 1,
+					color: "black",
+					opacity: this.options.opacityMode,
+					// fill
+					fill: true,
+					fillOpacity: this.options.opacityMode,
+					fillColor: this.options.modeColors[j],
+					// other
+					interactive: false
+				});
+				curve.addTo(this._map);
 			}
-
-			// remove test layer
-			if (test_layer) {
-				test_layer.remove();
-			}
-
-			var opacity = this.options.opacityMode;
-			var lng_start = this._grid.lngMin + (this._grid.sizeWidth * 0.5);
-			var lng_step = this._grid.sizeWidth;
-			var lat_start = this._grid.latMin + (this._grid.sizeHeight * 0.5);
-			var lat_step = this._grid.sizeHeight;
-
-			test_layer = L.d3SvgOverlay(function(selection, projection) {
-				var line = d3
-					.line()
-					.x(function(d) {
-						return projection.latLngToLayerPoint([lat_start + lat_step * d[1], lng_start + lng_step * d[0]]).x;
-					})
-					.y(function(d) {
-						return projection.latLngToLayerPoint([lat_start + lat_step * d[1], lng_start + lng_step * d[0]]).y;
-					})
-					.curve(d3.curveBasis);
-
-				selection
-					.selectAll("path")
-					.data(bands)
-					.enter()
-					.append("path")
-					.style("fill", function(d) { return d.color; })
-					.style("opacity", opacity)
-					.attr("d", function(d) {
-						var p = "";
-						for (var k = 0; k < d.coords.length; ++k) {
-							p += line(d.coords[k]) + "Z";
-						}
-						return p;
-					})
-					.exit()
-					.remove();
-			});
-			test_layer.addTo(map);
 		},
 		clearOverlay: function() {
 			this._result = false;
@@ -870,7 +865,6 @@ jQuery(function($) {
 				}
 			});
 		}
-		
 		
 		// return TopoJSON format
 		return {type: "FeatureCollection", features: features};
