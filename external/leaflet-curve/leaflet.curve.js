@@ -145,10 +145,11 @@ L.Curve = L.Path.extend({
 	},
 
 	_project: function() {
+		var pxBounds = new L.Bounds();
 		var coord, lastCoord, curCommand = null, curPoint;
 
+		// build list of points
 		this._points = [];
-		
 		for (var i = 0; i < this._coords.length; ++i) {
 			coord = this._coords[i];
 			if ("string" === typeof coord){
@@ -159,15 +160,18 @@ L.Curve = L.Path.extend({
 				switch (coord.length) {
 					case 2:
 						curPoint = this._map.latLngToLayerPoint(coord);
+						pxBounds.extend(curPoint);
 						lastCoord = coord;
 						break;
 					case 1:
 						if ("H" === curCommand) {
 							curPoint = this._map.latLngToLayerPoint([lastCoord[0], coord[0]]);
+							pxBounds.extend(curPoint);
 							lastCoord = [lastCoord[0], coord[0]];
 						}
 						else{
 							curPoint = this._map.latLngToLayerPoint([coord[0], lastCoord[1]]);
+							pxBounds.extend(curPoint);
 							lastCoord = [coord[0], lastCoord[1]];
 						}
 						break;
@@ -175,7 +179,17 @@ L.Curve = L.Path.extend({
 				this._points.push(curPoint);
 			}
 		}
-	}	
+
+		// add padding around bounds
+		var w = this._clickTolerance(),
+			p = new L.Point(w, w);
+
+		if (this._bounds.isValid() && pxBounds.isValid()) {
+			pxBounds.min._subtract(p);
+			pxBounds.max._add(p);
+			this._pxBounds = pxBounds;
+		}
+	}
 });
 
 L.curve = function (path, options){
@@ -228,6 +242,62 @@ L.SVG.include({
 			}
 		}
 		return str || "M0 0";
+	}
+});
+
+L.Canvas.include({
+	_updateCurve: function(layer) {
+		if (!this._drawing) { return; }
+
+		var i, /*j, len2, p,*/
+			points = layer._points,
+			len = points.length,
+			ctx = this._ctx;
+
+		if (!len) { return; }
+
+		this._drawnLayers[layer._leaflet_id] = layer;
+
+		ctx.beginPath();
+
+		if (ctx.setLineDash) {
+			ctx.setLineDash(layer.options && layer.options._dashArray || []);
+		}
+
+		var curCommand = null;
+		for (i = 0; i < points.length; ++i) {
+			if ("string" === typeof points[i]) {
+				curCommand = points[i];
+
+				// close path
+				if ("Z" === curCommand) {
+					ctx.closePath();
+				}
+			}
+			else if ("M" === curCommand) {
+				// move to coordinate
+				ctx.moveTo(points[i].x, points[i].y);
+			}
+			else {
+				switch (curCommand) {
+					case "H":
+					case "V":
+					case "L":
+						ctx.lineTo(points[i].x, points[i].y);
+						break;
+
+					case "C":
+						ctx.bezierCurveTo(points[i].x, points[i].y, points[++i].x, points[i].y, points[++i].x, points[i].y);
+						break;
+
+					default:
+						throw "unknown command: " + curCommand;
+				}
+			}
+		}
+
+		// fill and stroke
+		this._fillStroke(ctx, layer);
 	}
 });
 
