@@ -633,6 +633,7 @@ jQuery(function($) {
 		this.grid = grid;
 		
 		// transit modes
+		this.limitOneFlagPerRoute = false;
 		this.modes = [];
 		
 		// exclusion array
@@ -728,6 +729,11 @@ jQuery(function($) {
 			for (j = 0; j < this.modes.length; ++j) {
 				// skip
 				if (!this.modes[j].enabled) continue;
+
+				// check flags
+				if (this.limitOneFlagPerRoute && 0 < this.modes[j].flag && 0 < came_from[cur][1] && came_from[cur][1] !== this.modes[j].flag) {
+					continue;
+				}
 				
 				potential = this.modes[j].routesFrom(this, cur);
 				for (i = 0; i < potential.length; ++i) {
