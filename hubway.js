@@ -41,7 +41,7 @@ var markerOptions = {
 // The number of stations to show text results for
 var maxStations = 5;
 
-var defaultMarkerRadius = 100;
+var defaultMarkerRadius = 7.5;
 var cssColors = ['blue','navy','maroon','gray','maroon','lime','green','teal','aqua','antiquewhite','aquamarine','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
 // 'purple','fuchsia', 'white','olive','yellow','black','silver','red','azure'
 
@@ -1017,7 +1017,7 @@ function showStations() {
         var row = Hubway.stations[id];
         
         var description = row.name + ', ' + row['docks'] + ' bikes';        
-        marker = addMarker(row.latitude, row.longitude, description, "default", defaultMarkerRadius, markerOptions.default);
+        marker = addMarker(row.latitude, row.longitude, description, "default", 10 * defaultMarkerRadius, markerOptions.default);
         marker.setStyle(markerOptions.stationUnselected);
 
         marker.bindPopup(description);
@@ -1064,10 +1064,12 @@ function selectStation(id) {
 // remove a particular station
 function removeStation(id) {
     
-    var marker = Hubway.stations[id]['marker'];
-    marker.setStyle(markerOptions.stationUnselected);
+    if (id != -1) {
+        var marker = Hubway.stations[id]['marker'];
+        marker.setStyle(markerOptions.stationUnselected);
 
-    delete selectedFilters['stationStart'][id];
+        delete selectedFilters['stationStart'][id];
+    }
     
     if (!selectAllStations) {
         redraw();
@@ -1081,8 +1083,9 @@ function displaySelectedStationsText() {
 
     var description = '<div class="results_title">Selected stations:</div><div class="results_group">';
     
-    Object.keys(selectedFilters['stationStart']).forEach(function(station) {
-        description += Hubway.stations[station]['name'] + '<br>';
+    Object.keys(selectedFilters['stationStart']).forEach(function(id) {
+        if (id == -1) { return; }
+        description += Hubway.stations[id]['name'] + '<br>';
     });
     
     description += '</div>'
@@ -1199,12 +1202,14 @@ function showStationStatistic(forStatistic, properties) {
                 var options = illustrations[forStatistic].markerOptions;
         
                 if (!useRawMarkerSize) {
-                    markerSize = markerScale ? markerSize * Math.sqrt(defaultMarkerRadius / markerScale) : 0;
+                    markerSize = markerScale ? $("#js_markerSlider").slider("option", "value") * markerSize * Math.sqrt(defaultMarkerRadius / markerScale) : 0;
                     
                     // enforce minimum marker size                    
+                    /*
                     if (map.getZoom() < MIN_ZOOM_DEFAULT_MARKER && markerSize < defaultMarkerRadius) {
-                        markerSize = defaultMarkerRadius;
+                        markerSize = defaultMarkerRadius * 10;
                     }
+                    */
                 }
 
                 var cluster = "default";
@@ -1485,6 +1490,19 @@ jQuery(function($) {
   	        }
 	    });
 	});
+	
+    $("#js_markerSlider").slider({
+        min: 1,
+        max: 20,
+        step: 1,
+        value: 10,
+        range: false,
+        slide: function(event, ui) {
+            $("#js_markerSlider").slider("value", ui.value);
+            redraw();
+        }
+    });
+	
 	    
     // lay out filters
     setupFilters({
