@@ -252,7 +252,7 @@
 
   /*
     construct consecutive line segments from starting cell by
-    walking arround the enclosed area clock-wise
+    walking around the enclosed area clock-wise
    */
   function tracePath(grid, j, i){
     var maxj = grid.length;
@@ -262,7 +262,6 @@
     var dx, dy;
     var startEdge = ["none", "left", "bottom", "left", "right", "none", "bottom", "left", "top", "top", "none", "top", "right", "right", "bottom", "none"];
     var nextEdge  = ["none", "bottom", "right", "right", "top", "top", "top", "top", "left", "bottom", "right", "right", "left", "bottom", "left", "none"];
-    var edge;
 
     var startCell   = grid[j][i];
     var currentCell = grid[j][i];

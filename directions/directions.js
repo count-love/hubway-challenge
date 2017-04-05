@@ -202,6 +202,7 @@ jQuery(function($) {
 			modeColors: ["blue", "green", "red", "orange"],
 			timeScaleDomain: [0, 1800, 3600],
 			timeScaleRange: ["#4575b4", "#ffffbf", "#a50026"],
+			hybridTimeContours: [5, 15, 30, 45, 60],
 			opacityMode: 0.3,
 			opacityTime: 0.6
 		},
@@ -339,7 +340,7 @@ jQuery(function($) {
 			// draw overlay
 			this.redraw();
 		},
-		_drawMode: function() {
+		_d3Line: function() {
 			// used for line calculation
 			var lng_start = this._grid.lngMin + (this._grid.sizeWidth * 0.5);
 			var lng_step = this._grid.sizeWidth;
@@ -349,8 +350,24 @@ jQuery(function($) {
 			// d3 line implementation
 			var line = d3.line()
 				.x(function(d) { return lat_start + lat_step * d[1]; }) // x is latitude (confusing)
-				.y(function(d) { return lng_start + lng_step * d[0]; }) // y is longitude (confusing)
-				.curve(d3.curveBasis); // interpolation curve
+				.y(function(d) { return lng_start + lng_step * d[0]; }); // y is longitude (confusing)
+
+			return line;
+		},
+		_d3Scale: function() {
+			// configure scale
+			// #4575b4 #ffffbf #a50026
+			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
+			var scale = d3.scaleLinear()
+				.domain(this.options.timeScaleDomain)
+				.range(this.options.timeScaleRange)
+				.interpolate(d3.interpolateHcl)
+				.clamp(true);
+
+			return scale;
+		},
+		_drawMode: function() {
+			var line = this._d3Line().curve(d3.curveBasis); // interpolation curve
 
 			var grid, row, i, j, k, offset;
 			var band, context;
@@ -367,7 +384,7 @@ jQuery(function($) {
 					grid.push(row);
 				}
 
-				// calculate iso line
+				// calculate iso band
 				band = MarchingSquaresJS.isoBands(grid, 0.5, 1);
 
 				// draw band
@@ -395,15 +412,117 @@ jQuery(function($) {
 				this.addLayer(curve);
 			}
 		},
+		_drawHybrid: function() {
+			this._drawMode();
+
+			var grid, row;
+			var i, j, offset;
+
+			// build grid
+			grid = [];
+			for (i = 0; i < this._grid.countHeight; ++i) {
+				row = [];
+				offset = this._grid.countWidth * i;
+				for (j = 0; j < this._grid.countWidth; ++j) {
+					row.push(-1 === this._result[offset + j][0] ? Number.NaN : this._result[offset + j][0]);
+				}
+				grid.push(row);
+			}
+
+			// get line
+			var line = this._d3Line().curve(d3.curveBasis); // interpolation curve
+			var scale = this._d3Scale();
+
+			// calculate bands
+			var contour, context, tm;
+			for (i = 0; i < this.options.hybridTimeContours.length; ++i) {
+				tm = this.options.hybridTimeContours[i];
+
+				// calculate iso line
+				contour = MarchingSquaresJS.isoContours(grid, tm * 60);
+
+				// no contours?
+				if (!contour.length) {
+					continue;
+				}
+
+				// draw band
+				context = L.d3path();
+				line.context(context);
+				for (j = 0; j < contour.length; ++j) {
+					line(contour[j]); // draw band
+				}
+
+				// create curve
+				var curve = L.curve(context.toArray(), {
+					// stroke
+					stroke: true,
+					weight: 3,
+					color: scale(tm * 60),
+					opacity: 1,
+					// fill
+					fill: false,
+					// other
+					interactive: false
+				});
+				this.addLayer(curve);
+			}
+		},
 		_drawTime: function() {
-			// configure scale
-			// #4575b4 #ffffbf #a50026
-			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
-			var scale = d3.scaleLinear()
-				.domain(this.options.timeScaleDomain)
-				.range(this.options.timeScaleRange)
-				.interpolate(d3.interpolateHcl)
-				.clamp(true);
+			var grid, row;
+			var i, j, offset;
+
+			// build grid
+			grid = [];
+			for (i = 0; i < this._grid.countHeight; ++i) {
+				row = [];
+				offset = this._grid.countWidth * i;
+				for (j = 0; j < this._grid.countWidth; ++j) {
+					row.push(-1 === this._result[offset + j][0] ? Number.NaN : this._result[offset + j][0]);
+				}
+				grid.push(row);
+			}
+
+			// get line
+			var line = this._d3Line(); //.curve(d3.curveBasis); // interpolation curve
+			var scale = this._d3Scale();
+
+			// calculate iso bands
+			var band, context, curve;
+
+			// max time
+			var maxi = this.options.timeScaleDomain[this.options.timeScaleDomain.length - 1];
+			var ts = 60 * 2.5;
+			for (i = 0; i < maxi; i += ts) {
+				console.log(i);
+
+				// calculate iso band
+				band = MarchingSquaresJS.isoBands(grid, i, (i + ts >= maxi ? 100 * ts : ts));
+
+				console.log("A");
+
+				// draw band
+				context = L.d3path();
+				line.context(context);
+				for (j = 0; j < band.length; ++j) {
+					line(band[j]); // draw band
+					context.closePath(); // close path
+				}
+
+				// create curve
+				curve = L.curve(context.toArray(), {
+					// stroke
+					stroke: false,
+					// fill
+					fill: true,
+					fillOpacity: this.options.opacityTime,
+					fillColor: scale(i + ts / 2),
+					// other
+					interactive: false
+				});
+				this.addLayer(curve);
+			}
+
 		},
 		clearOverlay: function() {
 			this._result = false;
