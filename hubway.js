@@ -42,9 +42,8 @@ var markerOptions = {
 var maxStations = 5;
 
 var defaultMarkerRadius = 7.5;
-var cssColors = ['blue','navy','maroon','gray','maroon','lime','green','teal','aqua','antiquewhite','aquamarine','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
-// 'purple','fuchsia', 'white','olive','yellow','black','silver','red','azure'
-
+var cssColors = ['blue','navy','maroon','gray','green','teal','aqua','antiquewhite','aquamarine','beige','bisque','blanchedalmond','blueviolet','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
+// 'purple','fuchsia', 'white','olive','yellow','black','silver','red','azure','lime'
 // available filter options for queries
 var queryFilters = {
     'day': [
@@ -90,8 +89,8 @@ var queryFilters = {
     'gender': [
         {'label': 'all', 'set': {'gender': null}},
         {'label': 'unspecified', 'set': {'gender': [0]}},
-        {'label': 'male', 'set': {'gender': [1]}},
-        {'label': 'female', 'set': {'gender': [2]}},                
+        {'label': 'female', 'set': {'gender': [1]}},
+        {'label': 'male', 'set': {'gender': [2]}},                
     ]
 };
 
@@ -557,6 +556,9 @@ var illustrations = {
                                     // add these counts if they match the main query
                                     var trip = time << 16;
 
+                                    var startYear = selectedFiltersMainQuery['startYear'] == null ? 
+                                        true : selectedFiltersMainQuery['startYear'][DataSource.FIELDS.startYear(trip)];
+
                                     var startMonth = selectedFiltersMainQuery['startMonth'] == null ?
                                         true : selectedFiltersMainQuery['startMonth'][DataSource.FIELDS.startMonth(trip)];
                                                  
@@ -570,7 +572,7 @@ var illustrations = {
                                     // update the peak start+stop trips observed
                                     result[station]['max'] = Math.max(result[station]['max'], v[station][time]);
                             
-                                    if (startMonth && startWeekday && startHourSelected) {
+                                    if (startYear && startMonth && startWeekday && startHourSelected) {
                                         if (!result[station]['matchedCounts'][startHour]) {
                                             result[station]['matchedCounts'][startHour] = v[station][time];
                                         } else {
@@ -591,6 +593,8 @@ var illustrations = {
             selectedFilters = selectedFiltersMainQuery;
 
             // calculate utilization
+            var numberOfYears = selectedFilters['startYear'] == null ? Object.keys(queryFilters['year']).length-1 : Object.keys(selectedFilters['startYear']).length;
+
             var numberOfDays = selectedFilters['startWeekday'] == null ? 7 : Object.keys(selectedFilters['startWeekday']).length;           
             numberOfDays = selectedFilters['startMonth'] == null ? numberOfDays * 52 : numberOfDays * (52 / 4);
             
@@ -611,10 +615,10 @@ var illustrations = {
 
                 utilization[station]['matchedCounts'].forEach(function(hourlyCount) {
                     results['averages'][station] += hourlyCount;
-                    results['plots'][station].push(hourlyCount / (numberOfDays * utilization[station]['max']));
+                    results['plots'][station].push(hourlyCount / (numberOfYears * numberOfDays * utilization[station]['max']));
                 });
                 
-                results['averages'][station] /= (utilization[station]['max'] * numberOfDays * numberOfHours);
+                results['averages'][station] /= (utilization[station]['max'] * numberOfYears * numberOfDays * numberOfHours);
             });
 
             /*
@@ -1321,7 +1325,7 @@ function resetMapView() {
 // add a "loading" message over the map
 function createLoadingOverlay(obj) {
 	var ret = $();
-	
+    	
 	$(obj).each(function() {
 		var $obj = $(this);
 	
@@ -1481,10 +1485,10 @@ jQuery(function($) {
 	    
 	    
 	    $("#js_"+query).on("click", function() {
-       	    if (!reset) {
-           	    refreshQueryButtons(query);
-        	    activeStatistic = query;
+       	    refreshQueryButtons(query);
+      	    activeStatistic = query;
 
+       	    if (!reset) {
             	var loading = createLoadingOverlay("#map");    	    
   	            setTimeout(function() { illustrations[query].draw(); loading.remove() }, 0);
   	        }
