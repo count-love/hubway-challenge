@@ -348,23 +348,19 @@ jQuery(function($) {
 			var lat_step = this._grid.sizeHeight;
 
 			// d3 line implementation
-			var line = d3.line()
+			return d3.line()
 				.x(function(d) { return lat_start + lat_step * d[1]; }) // x is latitude (confusing)
 				.y(function(d) { return lng_start + lng_step * d[0]; }); // y is longitude (confusing)
-
-			return line;
 		},
 		_d3Scale: function() {
 			// configure scale
 			// #4575b4 #ffffbf #a50026
 			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
-			var scale = d3.scaleLinear()
+			return d3.scaleLinear()
 				.domain(this.options.timeScaleDomain)
 				.range(this.options.timeScaleRange)
 				.interpolate(d3.interpolateHcl)
 				.clamp(true);
-
-			return scale;
 		},
 		_drawMode: function() {
 			var line = this._d3Line().curve(d3.curveBasis); // interpolation curve
@@ -396,7 +392,7 @@ jQuery(function($) {
 				}
 
 				// create curve
-				var curve = L.curve(context.toArray(), {
+				this.addLayer(L.curve(context.toArray(), {
 					// stroke
 					stroke: true,
 					weight: 1,
@@ -408,98 +404,72 @@ jQuery(function($) {
 					fillColor: this.options.modeColors[j],
 					// other
 					interactive: false
-				});
-				this.addLayer(curve);
-			}
-		},
-		_drawHybrid: function() {
-			this._drawMode();
-
-			var grid, row;
-			var i, j, offset;
-
-			// build grid
-			grid = [];
-			for (i = 0; i < this._grid.countHeight; ++i) {
-				row = [];
-				offset = this._grid.countWidth * i;
-				for (j = 0; j < this._grid.countWidth; ++j) {
-					row.push(-1 === this._result[offset + j][0] ? Number.NaN : this._result[offset + j][0]);
-				}
-				grid.push(row);
-			}
-
-			// get line
-			var line = this._d3Line().curve(d3.curveBasis); // interpolation curve
-			var scale = this._d3Scale();
-
-			// calculate bands
-			var contour, context, tm;
-			for (i = 0; i < this.options.hybridTimeContours.length; ++i) {
-				tm = this.options.hybridTimeContours[i];
-
-				// calculate iso line
-				contour = MarchingSquaresJS.isoContours(grid, tm * 60);
-
-				// no contours?
-				if (!contour.length) {
-					continue;
-				}
-
-				// draw band
-				context = L.d3path();
-				line.context(context);
-				for (j = 0; j < contour.length; ++j) {
-					line(contour[j]); // draw band
-				}
-
-				// create curve
-				var curve = L.curve(context.toArray(), {
-					// stroke
-					stroke: true,
-					weight: 3,
-					color: scale(tm * 60),
-					opacity: 1,
-					// fill
-					fill: false,
-					// other
-					interactive: false
-				});
-				this.addLayer(curve);
+				}));
 			}
 		},
 		_drawTime: function() {
-			var grid, row;
-			var i, j, offset;
+			var scale = this._d3Scale();
+
+			var i, qx, qy;
+
+			var lng_start = this._grid.lngMin;
+			var lng_cell = this._grid.sizeWidth;
+			var lat_start = this._grid.latMin;
+			var lat_cell = this._grid.sizeHeight;
 
 			// build grid
+			for (i = 0; i < this._grid.count; ++i) {
+				// quantized
+				qx = i % this._grid.countWidth;
+				qy = (i - qx) / this._grid.countWidth;
+
+				// no result
+				if (this._result[i][0] < 0) continue;
+
+				this.addLayer(L.rectangle([
+					[lat_start + qy * lat_cell, lng_start + qx * lng_cell],
+					[lat_start + (1 + qy) * lat_cell, lng_start + (1 + qx) * lng_cell]
+				], {
+					// stroke
+					stroke: false,
+					// fill
+					fill: true,
+					fillOpacity: this.options.opacityTime,
+					fillColor: scale(this._result[i][0]),
+					// other
+					interactive: false
+				}));
+			}
+		},
+		/*
+		_drawTime: function() {
+			var grid, row;
+			var i, j;
+			var offset;
+
 			grid = [];
 			for (i = 0; i < this._grid.countHeight; ++i) {
 				row = [];
 				offset = this._grid.countWidth * i;
 				for (j = 0; j < this._grid.countWidth; ++j) {
-					row.push(-1 === this._result[offset + j][0] ? Number.NaN : this._result[offset + j][0]);
+					row.push(this._result[offset + j][0]);
 				}
 				grid.push(row);
 			}
 
 			// get line
-			var line = this._d3Line(); //.curve(d3.curveBasis); // interpolation curve
+			var line = this._d3Line(); // .curve(d3.curveBasis); // interpolation curve
 			var scale = this._d3Scale();
 
 			// calculate iso bands
-			var band, context, curve;
+			var band, context;
 
 			// max time
 			var maxi = this.options.timeScaleDomain[this.options.timeScaleDomain.length - 1];
 			var ts = 60 * 2.5;
 			for (i = 0; i < maxi; i += ts) {
-				console.log(i);
-
 				// calculate iso band
 				band = MarchingSquaresJS.isoBands(grid, i, (i + ts >= maxi ? 100 * ts : ts));
-
-				console.log("A");
 
 				// draw band
 				context = L.d3path();
@@ -510,7 +480,7 @@ jQuery(function($) {
 				}
 
 				// create curve
-				curve = L.curve(context.toArray(), {
+				this.addLayer(L.curve(context.toArray(), {
 					// stroke
 					stroke: false,
 					// fill
@@ -519,11 +489,11 @@ jQuery(function($) {
 					fillColor: scale(i + ts / 2),
 					// other
 					interactive: false
-				});
-				this.addLayer(curve);
+				}));
 			}
 
 		},
+		*/
 		clearOverlay: function() {
 			this._result = false;
 			this.redraw();
