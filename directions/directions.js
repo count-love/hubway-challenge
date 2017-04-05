@@ -6,6 +6,8 @@ jQuery(function($) {
 	// leaflet maps object
 	var map, layer;
 
+	var test_layer;
+
 	function loadTransitLayer(address) {
 		// remove old layer
 		if (layer) {
@@ -141,7 +143,6 @@ jQuery(function($) {
 
 		// set mode
 		var new_mode = $("[data-mode]").filter(".active").first().data("mode") || L.TransitLayer.MODE_MODE;
-		console.log(new_mode);
 		if (layer.getMode() !== new_mode) {
 			layer.setMode(new_mode);
 			refresh = true;
@@ -181,12 +182,17 @@ jQuery(function($) {
 		}
 	}
 
-	$("#transit-modes").on("click", ":checkbox", configureFromInterface);
-	$("#map-mode").on("click", "[data-mode]", configureFromInterface);
-	$("#bike-speed").on("click", ":radio", configureFromInterface);
+	$("#map-mode").on("click", "[data-mode]", function() {
+		$(".active").filter("[data-mode]").removeClass("active");
+		$(this).addClass("active");
+
+		configureFromInterface();
+	});
+	$("#transit-modes").on("change", ":checkbox", configureFromInterface);
+	$("#bike-speed").on("change", ":radio", configureFromInterface);
 
 	/* BEGIN LEAFLET LAYER */
-	L.TransitLayer = L.GeoJSON.extend({
+	L.TransitLayer = L.FeatureGroup.extend({
 		statics: {
 			MODE_MODE: "mode",
 			MODE_TIME: "time"
@@ -196,6 +202,7 @@ jQuery(function($) {
 			modeColors: ["blue", "green", "red", "orange"],
 			timeScaleDomain: [0, 1800, 3600],
 			timeScaleRange: ["#4575b4", "#ffffbf", "#a50026"],
+			hybridTimeContours: [5, 15, 30, 45, 60],
 			opacityMode: 0.3,
 			opacityTime: 0.6
 		},
@@ -211,8 +218,8 @@ jQuery(function($) {
 			// set options
 			L.setOptions(this, options);
 
-			// setup GeoJSON layer
-			L.GeoJSON.prototype.initialize.call(this, this._grid.toGeoJSON(), {
+			// setup feature group layer
+			L.FeatureGroup.prototype.initialize.call(this, [], {
 				style: L.bind(this.styleCell, this)
 			});
 		},
@@ -226,7 +233,7 @@ jQuery(function($) {
 		getMode: function() {
 			return this._mode;
 		},
-		setMode: function(mode) {
+		setMode: function(mode, refresh) {
 			switch (mode) {
 				case L.TransitLayer.MODE_MODE:
 				case L.TransitLayer.MODE_TIME:
@@ -234,7 +241,7 @@ jQuery(function($) {
 					this._mode = mode;
 
 					// refresh
-					if (this._result) {
+					if (this._result && ("undefined" === typeof refresh || false !== refresh)) {
 						this.refreshOverlay();
 					}
 
@@ -248,8 +255,8 @@ jQuery(function($) {
 		},
 		beforeAdd: function(map) {
 			// call parent
-			if (L.GeoJSON.beforeAdd) {
-				L.GeoJSON.beforeAdd.call(this, map);
+			if (L.FeatureGroup.beforeAdd) {
+				L.FeatureGroup.beforeAdd.call(this, map);
 			}
 
 			// resize
@@ -268,7 +275,7 @@ jQuery(function($) {
 		},
 		onAdd: function(map) {
 			// call parent
-			L.GeoJSON.prototype.onAdd.call(this, map);
+			L.FeatureGroup.prototype.onAdd.call(this, map);
 
 			// add listener for click
 			map.on("click", this.click, this);
@@ -283,7 +290,7 @@ jQuery(function($) {
 			map.off("click", this.click, this);
 
 			// call parent
-			L.GeoJSON.prototype.onRemove.call(this, map);
+			L.FeatureGroup.prototype.onRemove.call(this, map);
 		},
 		click: function(ev) {
 			this.buildOverlay(ev.latlng);
@@ -333,6 +340,160 @@ jQuery(function($) {
 			// draw overlay
 			this.redraw();
 		},
+		_d3Line: function() {
+			// used for line calculation
+			var lng_start = this._grid.lngMin + (this._grid.sizeWidth * 0.5);
+			var lng_step = this._grid.sizeWidth;
+			var lat_start = this._grid.latMin + (this._grid.sizeHeight * 0.5);
+			var lat_step = this._grid.sizeHeight;
+
+			// d3 line implementation
+			return d3.line()
+				.x(function(d) { return lat_start + lat_step * d[1]; }) // x is latitude (confusing)
+				.y(function(d) { return lng_start + lng_step * d[0]; }); // y is longitude (confusing)
+		},
+		_d3Scale: function() {
+			// configure scale
+			// #4575b4 #ffffbf #a50026
+			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
+			return d3.scaleLinear()
+				.domain(this.options.timeScaleDomain)
+				.range(this.options.timeScaleRange)
+				.interpolate(d3.interpolateHcl)
+				.clamp(true);
+		},
+		_drawMode: function() {
+			var line = this._d3Line().curve(d3.curveBasis); // interpolation curve
+
+			var grid, row, i, j, k, offset;
+			var band, context;
+			for (j = 0; j < this.options.modeColors.length; ++j) {
+				// build grid
+				// (tried rewriting MarchSquareJS to take vector input, but minimal speed up, better to keep original plugin)
+				grid = [];
+				for (i = 0; i < this._grid.countHeight; ++i) {
+					row = [];
+					offset = this._grid.countWidth * i;
+					for (k = 0; k < this._grid.countWidth; ++k) {
+						row.push(+(this._result[offset + k][1] === j));
+					}
+					grid.push(row);
+				}
+
+				// calculate iso band
+				band = MarchingSquaresJS.isoBands(grid, 0.5, 1);
+
+				// draw band
+				context = L.d3path();
+				line.context(context);
+				for (i = 0; i < band.length; ++i) {
+					line(band[i]); // draw band
+					context.closePath(); // close path
+				}
+
+				// create curve
+				this.addLayer(L.curve(context.toArray(), {
+					// stroke
+					stroke: true,
+					weight: 1,
+					color: "black",
+					opacity: this.options.opacityMode,
+					// fill
+					fill: true,
+					fillOpacity: this.options.opacityMode,
+					fillColor: this.options.modeColors[j],
+					// other
+					interactive: false
+				}));
+			}
+		},
+		_drawTime: function() {
+			var scale = this._d3Scale();
+
+			var i, qx, qy;
+
+			var lng_start = this._grid.lngMin;
+			var lng_cell = this._grid.sizeWidth;
+			var lat_start = this._grid.latMin;
+			var lat_cell = this._grid.sizeHeight;
+
+			// build grid
+			for (i = 0; i < this._grid.count; ++i) {
+				// quantized
+				qx = i % this._grid.countWidth;
+				qy = (i - qx) / this._grid.countWidth;
+
+				// no result
+				if (this._result[i][0] < 0) continue;
+
+				this.addLayer(L.rectangle([
+					[lat_start + qy * lat_cell, lng_start + qx * lng_cell],
+					[lat_start + (1 + qy) * lat_cell, lng_start + (1 + qx) * lng_cell]
+				], {
+					// stroke
+					stroke: false,
+					// fill
+					fill: true,
+					fillOpacity: this.options.opacityTime,
+					fillColor: scale(this._result[i][0]),
+					// other
+					interactive: false
+				}));
+			}
+		},
+		/*
+		_drawTime: function() {
+			var grid, row;
+			var i, j;
+			var offset;
+
+			grid = [];
+			for (i = 0; i < this._grid.countHeight; ++i) {
+				row = [];
+				offset = this._grid.countWidth * i;
+				for (j = 0; j < this._grid.countWidth; ++j) {
+					row.push(this._result[offset + j][0]);
+				}
+				grid.push(row);
+			}
+
+			// get line
+			var line = this._d3Line(); // .curve(d3.curveBasis); // interpolation curve
+			var scale = this._d3Scale();
+
+			// calculate iso bands
+			var band, context;
+
+			// max time
+			var maxi = this.options.timeScaleDomain[this.options.timeScaleDomain.length - 1];
+			var ts = 60 * 2.5;
+			for (i = 0; i < maxi; i += ts) {
+				// calculate iso band
+				band = MarchingSquaresJS.isoBands(grid, i, (i + ts >= maxi ? 100 * ts : ts));
+
+				// draw band
+				context = L.d3path();
+				line.context(context);
+				for (j = 0; j < band.length; ++j) {
+					line(band[j]); // draw band
+					context.closePath(); // close path
+				}
+
+				// create curve
+				this.addLayer(L.curve(context.toArray(), {
+					// stroke
+					stroke: false,
+					// fill
+					fill: true,
+					fillOpacity: this.options.opacityTime,
+					fillColor: scale(i + ts / 2),
+					// other
+					interactive: false
+				}));
+			}
+
+		},
+		*/
 		clearOverlay: function() {
 			this._result = false;
 			this.redraw();
@@ -343,23 +504,25 @@ jQuery(function($) {
 			}
 		},
 		redraw: function() {
-			// prepare
-			this.prepareToDraw();
+			// remove existing layers
+			this.clearLayers();
 
-			// reset style
-			var that = this;
-			that.eachLayer(function(l) { that.resetStyle(l); });
-		},
-		prepareToDraw: function() {
-			// #4575b4 #ffffbf #a50026
-			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
+			// no result? nothing to do
+			if (!this._result) {
+				return;
+			}
 
-			// configure scale
-			this._scale = d3.scaleLinear()
-				.domain(this.options.timeScaleDomain)
-				.range(this.options.timeScaleRange)
-				.interpolate(d3.interpolateHcl)
-				.clamp(true);
+			// redraw
+			switch (this._mode) {
+				case L.TransitLayer.MODE_TIME:
+					this._drawTime();
+					break;
+
+				case L.TransitLayer.MODE_MODE:
+				default:
+					this._drawMode();
+					break;
+			}
 		},
 		styleCell: function(feature) {
 			if (!this._result) {
@@ -563,6 +726,7 @@ jQuery(function($) {
 		this.grid = grid;
 		
 		// transit modes
+		this.limitOneFlagPerRoute = false;
 		this.modes = [];
 		
 		// exclusion array
@@ -658,6 +822,11 @@ jQuery(function($) {
 			for (j = 0; j < this.modes.length; ++j) {
 				// skip
 				if (!this.modes[j].enabled) continue;
+
+				// check flags
+				if (this.limitOneFlagPerRoute && 0 < this.modes[j].flag && 0 < came_from[cur][1] && came_from[cur][1] !== this.modes[j].flag) {
+					continue;
+				}
 				
 				potential = this.modes[j].routesFrom(this, cur);
 				for (i = 0; i < potential.length; ++i) {
@@ -765,39 +934,6 @@ jQuery(function($) {
 		var qy = (index - qx) / this.countWidth;
 		
 		return {lat: this.latMin + this.sizeHeight * (qy + 0.5), lng: this.lngMin + this.sizeWidth * (qx + 0.5)};
-	};
-	
-	Grid.prototype.toGeoJSON = function() {
-		var features = [];
-		
-		var qx, qy;
-		for (var i = 0; i < this.count; ++i) {
-			// quantized
-			qx = i % this.countWidth;
-			qy = (i - qx) / this.countWidth;
-			
-			// add feature
-			features.push({
-				type: "Feature",
-				geometry: {
-					type: "Polygon",
-					coordinates: [[
-						[this.lngMin + (qx * this.sizeWidth), this.latMin + (qy * this.sizeHeight)],
-						[this.lngMin + ((qx + 1) * this.sizeWidth), this.latMin + (qy * this.sizeHeight)],
-						[this.lngMin + ((qx + 1) * this.sizeWidth), this.latMin + ((qy + 1) * this.sizeHeight)],
-						[this.lngMin + (qx * this.sizeWidth), this.latMin + ((qy + 1) * this.sizeHeight)],
-						[this.lngMin + (qx * this.sizeWidth), this.latMin + (qy * this.sizeHeight)]
-					]]
-				},
-				properties: {
-					gc: i
-				}
-			});
-		}
-		
-		
-		// return TopoJSON format
-		return {type: "FeatureCollection", features: features};
 	};
 	/* END GRID */
 });
