@@ -120,12 +120,14 @@ L.Curve = L.Path.extend({
 				endPoint.controlPoint = controlPoint;
 				lastPoint = endPoint;
 			}
-			else {
+			else if ("L" === lastCommand || "M" === lastCommand) {
 				bound.extend(coord);
 				lastPoint = new L.LatLng(coord[0], coord[1]);
 			}
+			else {
+				throw "unsupported command: " + lastCommand;
+			}
 		}
-		console.log(bound);
 		return bound;
 	},
 	
@@ -291,7 +293,7 @@ L.Canvas.include({
 						break;
 
 					default:
-						throw "unknown command: " + curCommand;
+						throw "unsupported canvas command: " + curCommand;
 				}
 			}
 		}

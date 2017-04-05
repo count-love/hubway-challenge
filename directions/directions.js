@@ -192,7 +192,7 @@ jQuery(function($) {
 	$("#bike-speed").on("change", ":radio", configureFromInterface);
 
 	/* BEGIN LEAFLET LAYER */
-	L.TransitLayer = L.GeoJSON.extend({
+	L.TransitLayer = L.FeatureGroup.extend({
 		statics: {
 			MODE_MODE: "mode",
 			MODE_TIME: "time"
@@ -217,8 +217,8 @@ jQuery(function($) {
 			// set options
 			L.setOptions(this, options);
 
-			// setup GeoJSON layer
-			L.GeoJSON.prototype.initialize.call(this, this._grid.toGeoJSON(), {
+			// setup feature group layer
+			L.FeatureGroup.prototype.initialize.call(this, [], {
 				style: L.bind(this.styleCell, this)
 			});
 		},
@@ -254,8 +254,8 @@ jQuery(function($) {
 		},
 		beforeAdd: function(map) {
 			// call parent
-			if (L.GeoJSON.beforeAdd) {
-				L.GeoJSON.beforeAdd.call(this, map);
+			if (L.FeatureGroup.beforeAdd) {
+				L.FeatureGroup.beforeAdd.call(this, map);
 			}
 
 			// resize
@@ -274,7 +274,7 @@ jQuery(function($) {
 		},
 		onAdd: function(map) {
 			// call parent
-			L.GeoJSON.prototype.onAdd.call(this, map);
+			L.FeatureGroup.prototype.onAdd.call(this, map);
 
 			// add listener for click
 			map.on("click", this.click, this);
@@ -289,7 +289,7 @@ jQuery(function($) {
 			map.off("click", this.click, this);
 
 			// call parent
-			L.GeoJSON.prototype.onRemove.call(this, map);
+			L.FeatureGroup.prototype.onRemove.call(this, map);
 		},
 		click: function(ev) {
 			this.buildOverlay(ev.latlng);
@@ -336,13 +336,10 @@ jQuery(function($) {
 			// route
 			this._result = this._router.routeFrom(start_gc);
 
-			this.testIso();
-
-
 			// draw overlay
-			//this.redraw();
+			this.redraw();
 		},
-		testIso: function() {
+		_drawMode: function() {
 			// used for line calculation
 			var lng_start = this._grid.lngMin + (this._grid.sizeWidth * 0.5);
 			var lng_step = this._grid.sizeWidth;
@@ -395,8 +392,18 @@ jQuery(function($) {
 					// other
 					interactive: false
 				});
-				curve.addTo(this._map);
+				this.addLayer(curve);
 			}
+		},
+		_drawTime: function() {
+			// configure scale
+			// #4575b4 #ffffbf #a50026
+			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
+			var scale = d3.scaleLinear()
+				.domain(this.options.timeScaleDomain)
+				.range(this.options.timeScaleRange)
+				.interpolate(d3.interpolateHcl)
+				.clamp(true);
 		},
 		clearOverlay: function() {
 			this._result = false;
@@ -408,23 +415,25 @@ jQuery(function($) {
 			}
 		},
 		redraw: function() {
-			// prepare
-			this.prepareToDraw();
+			// remove existing layers
+			this.clearLayers();
 
-			// reset style
-			var that = this;
-			that.eachLayer(function(l) { that.resetStyle(l); });
-		},
-		prepareToDraw: function() {
-			// #4575b4 #ffffbf #a50026
-			// #ffffcc #800026, #004529 #ffffe5 #800026 - from http://colorbrewer2.org/#type=sequential&scheme=YlGn&n=9
+			// no result? nothing to do
+			if (!this._result) {
+				return;
+			}
 
-			// configure scale
-			this._scale = d3.scaleLinear()
-				.domain(this.options.timeScaleDomain)
-				.range(this.options.timeScaleRange)
-				.interpolate(d3.interpolateHcl)
-				.clamp(true);
+			// redraw
+			switch (this._mode) {
+				case L.TransitLayer.MODE_TIME:
+					this._drawTime();
+					break;
+
+				case L.TransitLayer.MODE_MODE:
+				default:
+					this._drawMode();
+					break;
+			}
 		},
 		styleCell: function(feature) {
 			if (!this._result) {
@@ -836,38 +845,6 @@ jQuery(function($) {
 		var qy = (index - qx) / this.countWidth;
 		
 		return {lat: this.latMin + this.sizeHeight * (qy + 0.5), lng: this.lngMin + this.sizeWidth * (qx + 0.5)};
-	};
-	
-	Grid.prototype.toGeoJSON = function() {
-		var features = [];
-		
-		var qx, qy;
-		for (var i = 0; i < this.count; ++i) {
-			// quantized
-			qx = i % this.countWidth;
-			qy = (i - qx) / this.countWidth;
-			
-			// add feature
-			features.push({
-				type: "Feature",
-				geometry: {
-					type: "Polygon",
-					coordinates: [[
-						[this.lngMin + (qx * this.sizeWidth), this.latMin + (qy * this.sizeHeight)],
-						[this.lngMin + ((qx + 1) * this.sizeWidth), this.latMin + (qy * this.sizeHeight)],
-						[this.lngMin + ((qx + 1) * this.sizeWidth), this.latMin + ((qy + 1) * this.sizeHeight)],
-						[this.lngMin + (qx * this.sizeWidth), this.latMin + ((qy + 1) * this.sizeHeight)],
-						[this.lngMin + (qx * this.sizeWidth), this.latMin + (qy * this.sizeHeight)]
-					]]
-				},
-				properties: {
-					gc: i
-				}
-			});
-		}
-		
-		// return TopoJSON format
-		return {type: "FeatureCollection", features: features};
 	};
 	/* END GRID */
 });
