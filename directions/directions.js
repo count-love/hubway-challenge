@@ -340,17 +340,21 @@ jQuery(function($) {
 			// draw overlay
 			this.redraw();
 		},
-		_d3Line: function() {
+		_d3Path: function() {
 			// used for line calculation
-			var lng_start = this._grid.lngMin + (this._grid.sizeWidth * 0.5);
+			var lng_start = this._grid.lngMin;
 			var lng_step = this._grid.sizeWidth;
-			var lat_start = this._grid.latMin + (this._grid.sizeHeight * 0.5);
+			var lat_start = this._grid.latMin;
 			var lat_step = this._grid.sizeHeight;
 
 			// d3 line implementation
-			return d3.line()
-				.x(function(d) { return lat_start + lat_step * d[1]; }) // x is latitude (confusing)
-				.y(function(d) { return lng_start + lng_step * d[0]; }); // y is longitude (confusing)
+			var projection = d3.geoTransform({
+				point: function(px, py) {
+					this.stream.point(lat_start + lat_step * py, lng_start + lng_step * px);
+				}
+			});
+
+			return d3.geoPath(projection);
 		},
 		_d3Scale: function() {
 			// configure scale
@@ -363,33 +367,28 @@ jQuery(function($) {
 				.clamp(true);
 		},
 		_drawMode: function() {
-			var line = this._d3Line().curve(d3.curveBasis); // interpolation curve
+			// make path and contour
+			var path = this._d3Path();
+			var contour = d3.contours()
+					.size([this._grid.countWidth, this._grid.countHeight])
+					.thresholds([0.5]);
 
-			var grid, row, i, j, k, offset;
+			var grid, j;
 			var band, context;
 			for (j = 0; j < this.options.modeColors.length; ++j) {
 				// build grid
-				// (tried rewriting MarchSquareJS to take vector input, but minimal speed up, better to keep original plugin)
-				grid = [];
-				for (i = 0; i < this._grid.countHeight; ++i) {
-					row = [];
-					offset = this._grid.countWidth * i;
-					for (k = 0; k < this._grid.countWidth; ++k) {
-						row.push(+(this._result[offset + k][1] === j));
-					}
-					grid.push(row);
-				}
+				grid = this._result.map(function(c) {
+					return +(c[1] === j);
+				});
 
 				// calculate iso band
-				band = MarchingSquaresJS.isoBands(grid, 0.5, 1);
+				band = contour(grid);
+				if (0 === band.length) continue;
 
 				// draw band
 				context = L.d3path();
-				line.context(context);
-				for (i = 0; i < band.length; ++i) {
-					line(band[i]); // draw band
-					context.closePath(); // close path
-				}
+				path.context(context);
+				path(band[0]);
 
 				// create curve
 				this.addLayer(L.curve(context.toArray(), {
@@ -443,41 +442,28 @@ jQuery(function($) {
 		},
 		/*
 		_drawTime: function() {
-			var grid, row;
-			var i, j;
-			var offset;
+			// make result grid
+			var grid;
+			grid = this._result.map(function(c) {
+				return c[0];
+			});
 
-			grid = [];
-			for (i = 0; i < this._grid.countHeight; ++i) {
-				row = [];
-				offset = this._grid.countWidth * i;
-				for (j = 0; j < this._grid.countWidth; ++j) {
-					row.push(this._result[offset + j][0]);
-				}
-				grid.push(row);
-			}
-
-			// get line
-			var line = this._d3Line(); // .curve(d3.curveBasis); // interpolation curve
+			// make path and contour
+			var path = this._d3Path();
+			var contour = d3.contours()
+				.size([this._grid.countWidth, this._grid.countHeight])
+				.thresholds(d3.range(2.5 * 60, 60 * 60, 2.5 * 60));
 			var scale = this._d3Scale();
+			var context;
 
 			// calculate iso bands
-			var band, context;
+			var bands = contour(grid);
 
-			// max time
-			var maxi = this.options.timeScaleDomain[this.options.timeScaleDomain.length - 1];
-			var ts = 60 * 2.5;
-			for (i = 0; i < maxi; i += ts) {
-				// calculate iso band
-				band = MarchingSquaresJS.isoBands(grid, i, (i + ts >= maxi ? 100 * ts : ts));
-
+			for (var i = 0; i < bands.length; ++i) {
 				// draw band
 				context = L.d3path();
-				line.context(context);
-				for (j = 0; j < band.length; ++j) {
-					line(band[j]); // draw band
-					context.closePath(); // close path
-				}
+				path.context(context);
+				path(bands[i]);
 
 				// create curve
 				this.addLayer(L.curve(context.toArray(), {
@@ -486,12 +472,11 @@ jQuery(function($) {
 					// fill
 					fill: true,
 					fillOpacity: this.options.opacityTime,
-					fillColor: scale(i + ts / 2),
+					fillColor: scale(bands[i].value),
 					// other
 					interactive: false
 				}));
 			}
-
 		},
 		*/
 		clearOverlay: function() {
