@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transit Choices</title>
+    <link rel="stylesheet" href="external/bootstrap/3.3.7/bootstrap.css" type="text/css">
+    <link rel="stylesheet" href="external/leaflet/1.0.3/leaflet.css" type="text/css">
+    <link rel="stylesheet" href="story/story.css" type="text/css">
+
+    <!-- libraries for page-->
+    <script src="external/jquery/2.1.1/jquery.js"></script>
+    <script src="external/leaflet/1.0.3/leaflet.js"></script>
+
+    <!-- for transit -->
+    <script src="external/d3/4.6.0/d3.js"></script>
+    <script src="external/d3-contour/d3-contour.js"></script>
+    <script src="external/leaflet-curve/leaflet.curve.js"></script>
+
+    <!-- for exploration -->
+    <script src="external/jquery-ui/1.12.1/jquery-ui.js"></script>
+    <script src="external/jquery.ui.touch-punch/4bc0091/jquery.ui.touch-punch.js"></script>
+    <script src="external/jdataview/2.5.0/jdataview.js"></script>
+    <script src="external/jbinary/2.1.3/jbinary.js"></script>
+
+    <!-- local javascript for transit -->
+    <script src="directions/transit-layer.js"></script>
+
+    <!-- for explore -->
+    <script src="datasource.js"></script>
+    <script src="explore.js"></script>
+
+    <!-- for page -->
+    <script src="story/story.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<div class="sidebar" id="sidebar-story">
+
+</div>
+<div class="sidebar" id="sidebar-explore">
+    <div class="row filter btn-group" role="button">
+        <button class="btn btn-default js_query" id="js_stations_reset">Reset</button><button class="btn btn-default js_query" id="js_stations_select">All Stations</button>
+
+        <div class="btn-group" role="button">
+            <button class="btn btn-default btn-group dropdown-toggle" type="button" id="js_stations" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                Station groups
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList"></ul>
+        </div>
+
+        <div class="btn-group" role="button">
+            <button class="btn btn-default btn-group dropdown-toggle" type="button" id="js_kMeans" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                Cluster results...
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu2" id="js_kMeansGroups"></ul>
+        </div>
+    </div>
+
+    <div class="row filter" id="js_queries"></div>
+    <div class="row filter" id="js_filters"></div>
+    <div class="row filter">
+        <div id="js_markerSlider" class="filter-slider"></div>
+    </div>
+
+    <hr>
+
+    <div class="filter row">
+        <div id="js_description"></div>
+    </div>
+</div>
+<div class="sidebar" id="sidebar-transit">
+    <h1>Navigating Boston</h1>
+
+    <form>
+        <div id="transit-source">
+            <div class="btn-group" role="group" aria-label="Mode to display on the map.">
+                <button type="button" class="btn btn-default active" data-source="../data/directions-s.json">City Center</button>
+                <button type="button" class="btn btn-default" data-source="../data/directions-l.json">Metro Area</button>
+            </div>
+        </div>
+
+        <div id="map-mode">
+            <div class="btn-group" role="group" aria-label="Mode to display on the map.">
+                <button type="button" class="btn btn-default active" data-mode="mode">Fastest Transit</button>
+                <button type="button" class="btn btn-default" data-mode="time">Travel Time</button>
+            </div>
+        </div>
+
+        <div id="transit-modes">
+            <strong>Include Transit Modes</strong>
+            <div class="checkbox">
+                <label><input type="checkbox" value="bike" checked> Hubway</label>
+            </div>
+            <div class="checkbox">
+                <label><input type="checkbox" value="mbta_subway" checked> Subway</label>
+            </div>
+            <div class="checkbox">
+                <label><input type="checkbox" value="mbta_bus" checked> Bus</label>
+            </div>
+            <div class="checkbox">
+                <label><input type="checkbox" value="mbta_commuter" checked> Commuter Line</label>
+            </div>
+        </div>
+
+        <div id="bike-speed">
+            <p><strong>Bike Speed</strong> Time between bike stations is estimated based on Hubways data, but you can fine tune which data to use.</p>
+            <div class="radio">
+                <label><input type="radio" name="bikespeed" value="0" checked> Average Hubway member (~8.6 miles per hour)</label>
+            </div>
+            <div class="radio">
+                <label><input type="radio" name="bikespeed" value="1"> Average Hubway casual user (~6.8 miles per hour)</label>
+            </div>
+            <div class="radio">
+                <label><input type="radio" name="bikespeed" value="2"> Google estimated bike time (~9.4 miles per hour)</label>
+            </div>
+        </div>
+    </form>
+
+    <svg id="legend">
+    </svg>
+</div>
+</body>
+</html>
