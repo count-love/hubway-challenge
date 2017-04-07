@@ -6,8 +6,6 @@ jQuery(function($) {
 	// leaflet maps object
 	var map, layer;
 
-	var test_layer;
-
 	function loadTransitLayer(address) {
 		// remove old layer
 		if (layer) {
@@ -210,7 +208,6 @@ jQuery(function($) {
 			// private properties
 			this._start = null;
 			this._result = false;
-			this._scale = null;
 			this._mode = L.TransitLayer.MODE_MODE;
 			this._grid = router.grid;
 			this._router = router;
@@ -219,9 +216,7 @@ jQuery(function($) {
 			L.setOptions(this, options);
 
 			// setup feature group layer
-			L.FeatureGroup.prototype.initialize.call(this, [], {
-				style: L.bind(this.styleCell, this)
-			});
+			L.FeatureGroup.prototype.initialize.call(this, []);
 		},
 		getStart: function() {
 			if (this._start) {
@@ -508,34 +503,6 @@ jQuery(function($) {
 					this._drawMode();
 					break;
 			}
-		},
-		styleCell: function(feature) {
-			if (!this._result) {
-				return {stroke: false, fill: false, interactive: false};
-			}
-
-			// get feature
-			var gc = feature.properties.gc;
-
-			// time
-			if (L.TransitLayer.MODE_TIME === this._mode) {
-				var tm = this._result[gc][0];
-				if (tm < 0) {
-					return {stroke: false, fill: false, interactive: false};
-				}
-
-				// color code
-				return {stroke: false, fill: true, fillOpacity: this.options.opacityTime, fillColor: this._scale(tm), interactive: false};
-			}
-
-			// mode color
-			var mode = this._result[gc][1];
-			if (mode >= 0 && mode < this.options.modeColors.length) {
-				return {stroke: false, fill: true, fillOpacity: this.options.opacityMode, fillColor: this.options.modeColors[mode], interactive: false};
-			}
-
-			// none
-			return {stroke: false, fill: false, interactive: false};
 		}
 	});
 
