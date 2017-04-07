@@ -88,6 +88,11 @@
 			return loaded;
 		},
 		loadData: function(src_trips, src_stations) {
+			// already loaded
+			if (loaded) {
+				return $.Deferred().resolveWith(this).promise();
+			}
+
 			// make a promise
 			var dfd_trips = new $.Deferred(), dfd_stations = new $.Deferred(), that = this;
 			
@@ -101,8 +106,6 @@
 				// notify progress
 				dfd_trips.notifyWith(that, ["downloaded-trips"]);
 				
-				// var t0 = performance.now();
-				
 				// create data view
 				var bin = DataView ? new DataView(data) : new jDataView(data);
 				
@@ -114,9 +117,6 @@
 					dfd.rejectWith(that, [err]);
 					return;
 				}
-				
-				// var t1 = performance.now();
-				// console.log(t1 - t0);
 				
 				// notify progress
 				dfd_trips.notifyWith(that, ["parsed-trips"]);
