@@ -7,7 +7,7 @@
 	var root = this;
 	
 	// private properties
-	var loaded = false;
+	var load_status = false; // false before loading, deferred object during loading, true after loading
 	var trips, stations; // data
 	var distances, angles; // computed
 	
@@ -85,12 +85,17 @@
 			}
 		},
 		isLoaded: function() {
-			return loaded;
+			return true === load_status;
 		},
 		loadData: function(src_trips, src_stations) {
 			// already loaded
-			if (loaded) {
+			if (true === load_status) {
 				return $.Deferred().resolveWith(this).promise();
+			}
+
+			// is loading?
+			if (false !== load_status) {
+				return load_status;
 			}
 
 			// make a promise
@@ -122,7 +127,7 @@
 				dfd_trips.notifyWith(that, ["parsed-trips"]);
 				
 				// set loaded and resolve
-				loaded = true;
+				load_status = true;
 				dfd_trips.resolveWith(that);
 			});
 			
@@ -152,8 +157,9 @@
 				// reject
 				dfd_stations.rejectWith(that, [err, text]);
 			});
-			
-			return $.when(dfd_trips, dfd_stations);
+
+			// store pending load status to avoid duplicate loads
+			return (load_status = $.when(dfd_trips, dfd_stations));
 		},
 		stations: function() {
 			var ret = [];
