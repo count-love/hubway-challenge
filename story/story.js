@@ -485,6 +485,9 @@
 			// listen for toggling collapsed
 			$explore.on("show.bs.collapse", onExploreEnable);
 			$explore.on("hide.bs.collapse", onExploreDisable);
+
+			// add transit listeners
+			addTransitListeners();
 		},
 		onResize: function() {
 			// get height
@@ -558,12 +561,18 @@
 		},
 		configureExploreLayer: function(config) {
 			if (false === config) {
+				// close in explore
+				$("#tool-explore").removeClass("in");
+
 				// if installed? send clear message
 				if (installed_explore) {
 					ExploreTool.clearMap();
 				}
 				return;
 			}
+
+			// close in explore
+			$("#tool-explore").addClass("in");
 
 			// install
 			$.when(this.installExploreLayer()).done(function() {
@@ -628,12 +637,18 @@
 		},
 		configureTransitLayer: function(config) {
 			if (false === config) {
+				// close in explore
+				$("#tool-transit").removeClass("in");
+
 				// if installed? clear layer
 				if (layer_transit) {
 					layer_transit.clearOverlay();
 				}
 				return;
 			}
+
+			// open in explore
+			$("#tool-transit").addClass("in");
 
 			// install
 			$.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
@@ -666,7 +681,8 @@
 					map.flyToBounds(layer_transit.getBounds());
 				}
 
-				// TODO: sync layer state to explore interface
+				// configure transit interface
+				configureTransitInterface();
 			});
 		},
 		configureMap: function(config) {
@@ -691,9 +707,19 @@
 				}
 			}
 		},
-		showOverlayError: function(message) {
-			// TODO: turn into nice map overlay, then fade out
-			alert(message);
+		showOverlayError: function(message, tm) {
+			var msg = $('<div class="overlay-warning"></div>').text(message).appendTo("body");
+			msg.fadeIn(200, function() {
+				if (false === tm) {
+					return;
+				}
+
+				setTimeout(function() {
+					msg.fadeOut(400, function() {
+						msg.remove();
+					})
+				}, tm || 8000);
+			});
 		}
 	};
 
@@ -785,5 +811,139 @@
 		});
 
 		return dfd.promise();
+	}
+
+	// add event handlers
+	function addTransitListeners() {
+		$("#transit-source").on("click", "[data-source]", function () {
+			var $this = $(this), old_start = null;
+
+			// already selected
+			if ($this.hasClass("active")) {
+				return;
+			}
+
+			// update interface
+			// slight browser optimization?
+			$(".active").filter("[data-source]").removeClass("active");
+			$this.addClass("active");
+
+			// old start
+			if (layer_transit) {
+				old_start = layer_transit.getStart();
+			}
+
+			// disable everything
+			var disabled = $("input, button", "#tool-transit").not(":disabled").prop("disabled", true);
+			Story.installTransitLayer($this.data("source"))
+				.done(function () {
+					// enable interface
+					disabled.prop("disabled", false);
+
+					// adjust bounds
+					map.flyToBounds(layer_transit.getBounds());
+
+					// configure
+					configureTransitFromInterface();
+
+					// restore
+					if (old_start) {
+						layer_transit.buildOverlay(old_start);
+					}
+				});
+		});
+
+
+		$("#map-mode").on("click", "[data-mode]", function () {
+			$(".active").filter("[data-mode]").removeClass("active");
+			$(this).addClass("active");
+
+			configureTransitFromInterface();
+		});
+		$("#transit-modes").on("change", ":checkbox", configureTransitFromInterface);
+		$("#bike-speed").on("change", ":radio", configureTransitFromInterface);
+	}
+
+	function configureTransitFromInterface() {
+		if (!layer_transit) return;
+
+		var refresh = false;
+
+		// set mode
+		var new_mode = $("[data-mode]").filter(".active").first().data("mode") || L.TransitLayer.MODE_MODE;
+		if (layer_transit.getMode() !== new_mode) {
+			layer_transit.setMode(new_mode);
+			refresh = true;
+		}
+
+		// enable modes
+		$("#transit-modes").find(":checkbox").each(function() {
+			var enabled = !!$(this).prop("checked");
+
+			var mode = layer_transit.getRouter().getModeByName(this.value);
+			if (mode) {
+				if (mode.enabled !== enabled) {
+					mode.enabled = enabled;
+					refresh = true;
+				}
+			}
+
+			// special interface change
+			if ("bike" === this.value) {
+				$("#bike-speed")[enabled ? "show" : "hide"]("fast");
+			}
+		});
+
+
+		// bike speed
+		var speed_index = parseInt($("#bike-speed").find(":radio").filter(":checked").val(), 10);
+		var mode = layer_transit.getRouter().getModeByName("bike");
+		if (mode) {
+			if (mode.getIndex() !== speed_index) {
+				mode.setIndex(speed_index);
+				refresh = true;
+			}
+		}
+
+		if (refresh) {
+			layer_transit.refreshOverlay();
+		}
+	}
+
+	function configureTransitInterface() {
+		if (!layer_transit) return;
+
+		var elems;
+
+		// set source
+		elems = $("[data-source]", "#tool-transit");
+		elems.removeClass("active");
+		elems.filter("[data-source='" + transit_source + "']").addClass("active");
+
+		// set mode
+		elems = $("[data-mode]", "#tool-transit");
+		elems.removeClass("active");
+		elems.filter("[data-mode='" + layer_transit.getMode() + "']").addClass("active");
+
+		// enable modes
+		$("#transit-modes").find(":checkbox").each(function() {
+			var mode = layer_transit.getRouter().getModeByName(this.value);
+			if (mode) {
+				$(this).prop("checked", mode.enabled);
+			}
+
+			// special interface change
+			if ("bike" === this.value) {
+				$("#bike-speed")[mode.enabled ? "show" : "hide"]("fast");
+			}
+		});
+
+		// set bike speed
+		elems = $("#bike-speed").find(":radio");
+		elems.prop("checked", false);
+		var mode = layer_transit.getRouter().getModeByName("bike");
+		if (mode) {
+			elems.filter("[value='" + mode.getIndex() + "']").prop("checked", true);
+		}
 	}
 }).call(this, jQuery);
