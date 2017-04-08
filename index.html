@@ -113,11 +113,11 @@
             <div class="panel-body">
                 <!-- start explore interface -->
                 <div class="filter btn-group" role="button">
-                    <button class="btn btn-default js_query" id="js_stations_reset">Reset</button><button class="btn btn-default js_query" id="js_stations_select">All Stations</button>
+                    <button class="btn btn-default js_query" id="js_stations_reset">Reset</button>
 
                     <div class="btn-group" role="button">
                         <button class="btn btn-default btn-group dropdown-toggle" type="button" id="js_stations" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            Station groups
+                            Stations
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList"></ul>
@@ -125,11 +125,17 @@
 
                     <div class="btn-group" role="button">
                         <button class="btn btn-default btn-group dropdown-toggle" type="button" id="js_kMeans" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            Cluster results...
+                            Clusters
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu2" id="js_kMeansGroups"></ul>
                     </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-default btn-group" id="js_markerSize_minus">-</button>
+                        <button class="btn btn-default btn-group" id="js_markerSize_plus">+</button>
+                    </div>
+                    
                 </div>
 
                 <div class="filter" id="js_queries"></div>
