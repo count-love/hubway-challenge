@@ -1510,6 +1510,12 @@ function addToMap(new_map) {
 // export global object providing an API into
 var root = this;
 root.ExploreTool = {
+    prepareDataSource: function() {
+        // can be called multiple times, just starts loading data to have ready
+        if (!DataSource.isLoaded()) {
+	        DataSource.loadData("data/trips.bin", "data/stations.json");
+        }
+    },
     addToMap: addToMap,
     setFilters: function(filter_names, should_redraw) {
         // suppress redraw
@@ -1607,6 +1613,7 @@ root.ExploreTool = {
 		    redraw();
 	    }
     },
+    showStations: showStations,
     resetMap: resetMap,
     clearMap: function() {
         activeStatistic = null;
