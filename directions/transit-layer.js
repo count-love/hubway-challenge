@@ -12,7 +12,8 @@
 			timeScaleRange: ["#4575b4", "#ffffbf", "#a50026"],
 			hybridTimeContours: [5, 15, 30, 45, 60],
 			opacityMode: 0.3,
-			opacityTime: 0.6
+			opacityTime: 0.6,
+			listenClick: true
 		},
 		initialize: function(router, options) {
 			// private properties
@@ -98,7 +99,15 @@
 			L.FeatureGroup.prototype.onRemove.call(this, map);
 		},
 		click: function(ev) {
-			this.buildOverlay(ev.latlng);
+			if (this.options.listenClick) {
+				this.buildOverlay(ev.latlng);
+			}
+		},
+		getBounds: function() {
+			return [
+				[this._grid.north, this._grid.west],
+				[this._grid.south, this._grid.east]
+			];
 		},
 		sizeMapForGrid: function(inside) {
 			if ("undefined" === typeof inside) {
@@ -107,14 +116,16 @@
 
 			if (this._map) {
 				// fit bounds
-				var zoom = this._map.getBoundsZoom([
-					[this._grid.north, this._grid.west],
-					[this._grid.south, this._grid.east]
-				], inside);
+				var zoom = this._map.getBoundsZoom(this.getBounds(), inside);
 				this._map.setView([(this._grid.north + this._grid.south) / 2, (this._grid.east + this._grid.west) / 2], zoom);
 			}
 		},
 		buildOverlay: function(latlng) {
+			// accept grid coordinate as well
+			if ("number" === typeof latlng) {
+				latlng = this._grid.gridIndexToLatLng(latlng);
+			}
+
 			// convert to latitude and longitude
 			this._start = L.latLng(latlng);
 
@@ -317,8 +328,8 @@
 	});
 
 	// factor, Leaflet convention
-	L.transitLayer = function(options) {
-		return new L.TransitLayer(options);
+	L.transitLayer = function(router, options) {
+		return new L.TransitLayer(router, options);
 	};
 	/* END LEAFLET LAYER */
 
@@ -696,6 +707,13 @@
 		var qy = (index - qx) / this.countWidth;
 
 		return {lat: this.latMin + this.sizeHeight * (qy + 0.5), lng: this.lngMin + this.sizeWidth * (qx + 0.5)};
+	};
+
+	Grid.prototype.gridIndexToLatLng = function(index) {
+		var qx = index % this.countWidth;
+		var qy = (index - qx) / this.countWidth;
+
+		return L.latLng(this.latMin + this.sizeHeight * (qy + 0.5), this.lngMin + this.sizeWidth * (qx + 0.5));
 	};
 	/* END GRID */
 

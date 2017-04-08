@@ -8,9 +8,17 @@
 	var panes = [], active = -1;
 	var map;
 
+	// v
+	var is_exploring = false;
+
 	// UI math and variables
 	var pane_height;
 	var scroll_start = null, scroll_offset_last = 0;
+
+	// map tools
+	var installed_explore = false;
+	var transit_source = null;
+	var layer_transit, pane_transit;
 
 	// turn off
 	$.event.special.mousewheel.settings.normalizeOffset = false;
@@ -37,7 +45,20 @@
 	function _configurePaneActive(pane, active) {
 		pane.$indicator.toggleClass("active", active);
 
+		// on hide
+		if (!active && pane.config.deactivated) {
+			pane.config.deactivated.call(pane);
+		}
 
+		// setup map?
+		if (active && pane.config.map) {
+			Story.configureMap(pane.config.map);
+		}
+
+		// on show
+		if (active && pane.config.activated) {
+			pane.config.activated.call(pane);
+		}
 
 		// UPDATE NAV LINKS
 		// is first?
@@ -130,8 +151,6 @@
 		// animate to position
 		_transitionToIndex(new_active, true);
 	}, 100);
-
-	/* TEST */
 
 	function onMouseWheel(ev) {
 		// only vertical scroll
@@ -305,7 +324,7 @@
 
 			// string
 			if ("string" === typeof index_or_name) {
-				for (var i = 0; i < this.panes; ++i) {
+				for (var i = 0; i < panes.length; ++i) {
 					if (index_or_name === panes[i].name) {
 						return panes[i];
 					}
@@ -313,6 +332,83 @@
 			}
 
 			return null;
+		},
+		configureExploreLayer: function(config) {
+			if (false === config) {
+				// if installed? send clear message
+				if (installed_explore) {
+					ExploreTool.clearMap();
+				}
+				return;
+			}
+
+		},
+		configureTransitLayer: function(config) {
+			if (false === config) {
+				// if installed? clear layer
+				if (layer_transit) {
+					layer_transit.clearOverlay();
+				}
+				return;
+			}
+
+			// need to reinstall?
+			var desired_transit_source = config.source || "data/directions-s.json";
+			if (layer_transit && transit_source !== desired_transit_source) {
+				layer_transit.remove();
+				layer_transit = null;
+			}
+
+			// install transit layer
+			if (!layer_transit) {
+				loadTransitLayer(desired_transit_source)
+					.done(function() {
+						Story.configureTransitLayer(config);
+					})
+					.fail(function() {
+						Story.showOverlayError("Unable to load transit information. Please try refreshing.");
+					});
+				return;
+			}
+
+			// set mode (do not redraw)
+			layer_transit.setMode(config.mode || "mode", false);
+
+			var router = layer_transit.getRouter(), mode;
+
+			// bike speed
+			mode = router.getModeByName("bike");
+			if (mode) {
+				if (mode.getIndex() !== (config.bikeSpeed || 0)) {
+					mode.setIndex(config.bikeSpeed || 0);
+				}
+			}
+
+			// transit modes
+			(mode = router.getModeByName("bike")) && (mode.enabled = config.modeBike || true);
+			(mode = router.getModeByName("mbta_subway")) && (mode.enabled = config.modeMbtaSubway || true);
+			(mode = router.getModeByName("mbta_bus")) && (mode.enabled = config.modeMbtaBus || true);
+			(mode = router.getModeByName("mbta_commuter")) && (mode.enabled = config.modeMbtaCommuter || true);
+
+			// configure transit layer
+			if (config.start) {
+				layer_transit.buildOverlay(parseInt(config.start, 10));
+			}
+
+			// resize map
+			if (config.resize !== false) {
+				map.flyToBounds(layer_transit.getBounds());
+			}
+
+			// TODO: sync layer state to explore interface
+		},
+		configureMap: function(config) {
+			this.configureExploreLayer(config.toolExplore || false);
+			this.configureTransitLayer(config.toolTransit || false);
+		},
+		showOverlayError: function(message) {
+			// TODO: turn into nice map overlay, then fade out
+			alert(message);
 		}
 	};
 
@@ -326,9 +422,73 @@
 
 		// store name
 		this.name = this.$el.data("pane");
+
+		// configuration
+		this.config = {};
 	}
 
 	StoryPane.prototype.isActive = function() {
 		return Story.getActivePane() === this;
 	};
+
+	StoryPane.prototype.configure = function(config) {
+		this.config = config;
+	};
+
+
+
+	/* SECTION: TRANSIT LAYER CODE */
+	function loadTransitLayer(source) {
+		var dfd = $.Deferred();
+
+		// load data
+		$.ajax({
+			dataType: "json",
+			url: source
+		}).done(function(received_data) {
+			// do not bother drawing (could be race conditions here, should potentially stop multiple loads)
+			if (layer_transit) {
+				return;
+			}
+
+			// received data
+			var grid = new Grid(received_data.grid);
+
+			// setup router
+			var router = new Router(grid);
+			router.excludeCoordinatesAndWater(received_data.exclude, received_data.water, 0.3);
+
+			// add modes
+			router.addMode(new ModeMultiLookup("bike", received_data.bike, 0, 60, 1));
+			router.addMode(new ModeLookup("mbta_bus", received_data.mbta_bus, 90, 2));
+			router.addMode(new ModeLookup("mbta_subway", received_data.mbta_subway, 90, 2));
+			router.addMode(new ModeLookup("mbta_commuter", received_data.mbta_commuter, 120, 2));
+			//router.addMode(new ModeLookup("mbta_ferry", received_data.mbta_ferry, 120, 2));
+			router.addMode(new ModeWalk());
+
+			// add pane
+			if (!pane_transit) {
+				pane_transit = map.createPane('transit');
+				pane_transit.style.zIndex = 298;
+			}
+
+			// add grid
+			layer_transit = L.transitLayer(router, {
+				resizeOnAdd: false,
+				pane: "transit",
+				listenClick: is_exploring
+			});
+			layer_transit.addTo(map);
+
+			// store source
+			transit_source = source;
+
+			// resolve
+			dfd.resolve();
+		}).fail(function(jqXHR, text, err) {
+			dfd.reject(text || err);
+		});
+
+		return dfd.promise();
+	}
 }).call(this, jQuery);
