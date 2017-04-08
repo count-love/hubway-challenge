@@ -25,7 +25,30 @@ html, body {
     padding: 10px;
 }
 
-.sidebar h1 {
+#sidebar-story {
+    padding: 0; /* no padding for story */
+}
+
+#story {
+    overflow: hidden;
+    position: relative;
+    height: 100%;
+}
+
+.story-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+}
+
+.story-pane {
+    padding: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.sidebar h2 {
     margin-top: 0;
     font-size: 24px
 }
