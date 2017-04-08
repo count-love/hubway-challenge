@@ -628,6 +628,16 @@
 			// install transit layer
 			if (!layer_transit) {
 				return loadTransitLayer(desired_transit_source)
+					.done(function() {
+						layer_transit.on("clickoutside", function() {
+							if ("data/directions-s.json" === transit_source) {
+								Story.showOverlayError("The current transit information is limited to the city center. Switch to the metro area to explore a larger area.");
+							}
+							else {
+								Story.showOverlayError("We do not have transit or bike data in that area. Stick a little closer to Boston for best results.");
+							}
+						});
+					})
 					.fail(function() {
 						Story.showOverlayError("Unable to load transit information. Please try refreshing.");
 					});

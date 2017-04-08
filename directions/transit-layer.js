@@ -100,7 +100,11 @@
 		},
 		click: function(ev) {
 			if (this.options.listenClick) {
-				this.buildOverlay(ev.latlng);
+				// build overlay
+				if (!this.buildOverlay(ev.latlng)) {
+					// click outside of grid
+					this.fire("clickoutside", ev)
+				}
 			}
 		},
 		getBounds: function() {
@@ -134,27 +138,17 @@
 
 			// outside of grid?
 			if (-1 === start_gc) {
-				// TODO: show message about outside of region?
 				this.clearOverlay();
 				return false;
 			}
-
-			/*
-			 var t0, t1, rt = 0, iter = 10;
-			 for (var i = 0; i < iter; ++i) {
-			 t0 = performance.now();
-			 result = router.routeFrom(start_gc);
-			 t1 = performance.now();
-			 rt += t1 - t0;
-			 }
-			 console.log(rt / iter);
-			 */
 
 			// route
 			this._result = this._router.routeFrom(start_gc);
 
 			// draw overlay
 			this.redraw();
+
+			return true;
 		},
 		_d3Path: function() {
 			// used for line calculation
