@@ -333,6 +333,16 @@
 
 			return null;
 		},
+		installExploreLayer: function() {
+			if (installed_explore) {
+				return true;
+			}
+
+			// return promise
+			return ExploreTool.addToMap(map).done(function() {
+				installed_explore = true;
+			});
+		},
 		configureExploreLayer: function(config) {
 			if (false === config) {
 				// if installed? send clear message
@@ -342,6 +352,58 @@
 				return;
 			}
 
+			// install
+			$.when(this.installExploreLayer()).done(function() {
+				if (config.stations) {
+					ExploreTool.setStations(config.stations, false);
+				}
+				else if (config.stationGroup) {
+					ExploreTool.setStationGroupByLabel(config.stationGroup, false);
+				}
+
+				// set number of clusters
+				ExploreTool.setClusters(config.clusters || 0, false);
+
+				// set marker size
+				ExploreTool.setMarkerSize(config.markerSize || 10, false);
+
+				// set filters
+				var filter_arr, filter_hash = $.extend({
+					day: "all",
+					week: "all",
+					season: "all",
+					year: "2016",
+					member: "all",
+					gender: "all"
+				}, config.filter || {});
+
+				filter_arr = $.map(filter_hash, function(val, key) {
+					return "js_" + key + "_" + val;
+				});
+
+				ExploreTool.setFilters(filter_arr, false);
+
+				// set statistic
+				ExploreTool.setActiveStatistic(config.statistic || "starts", true);
+			});
+		},
+		installTransitLayer: function(source) {
+			// need to reinstall?
+			var desired_transit_source = source || "data/directions-s.json";
+			if (layer_transit && transit_source !== desired_transit_source) {
+				layer_transit.remove();
+				layer_transit = null;
+			}
+
+			// install transit layer
+			if (!layer_transit) {
+				return loadTransitLayer(desired_transit_source)
+					.fail(function() {
+						Story.showOverlayError("Unable to load transit information. Please try refreshing.");
+					});
+			}
+
+			return true;
 		},
 		configureTransitLayer: function(config) {
 			if (false === config) {
@@ -352,59 +414,61 @@
 				return;
 			}
 
-			// need to reinstall?
-			var desired_transit_source = config.source || "data/directions-s.json";
-			if (layer_transit && transit_source !== desired_transit_source) {
-				layer_transit.remove();
-				layer_transit = null;
-			}
+			// install
+			$.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
+				// set mode (do not redraw)
+				layer_transit.setMode(config.mode || "mode", false);
 
-			// install transit layer
-			if (!layer_transit) {
-				loadTransitLayer(desired_transit_source)
-					.done(function() {
-						Story.configureTransitLayer(config);
-					})
-					.fail(function() {
-						Story.showOverlayError("Unable to load transit information. Please try refreshing.");
-					});
-				return;
-			}
+				var router = layer_transit.getRouter(), mode;
 
-			// set mode (do not redraw)
-			layer_transit.setMode(config.mode || "mode", false);
-
-			var router = layer_transit.getRouter(), mode;
-
-			// bike speed
-			mode = router.getModeByName("bike");
-			if (mode) {
-				if (mode.getIndex() !== (config.bikeSpeed || 0)) {
-					mode.setIndex(config.bikeSpeed || 0);
+				// bike speed
+				mode = router.getModeByName("bike");
+				if (mode) {
+					if (mode.getIndex() !== (config.bikeSpeed || 0)) {
+						mode.setIndex(config.bikeSpeed || 0);
+					}
 				}
-			}
 
-			// transit modes
-			(mode = router.getModeByName("bike")) && (mode.enabled = config.modeBike || true);
-			(mode = router.getModeByName("mbta_subway")) && (mode.enabled = config.modeMbtaSubway || true);
-			(mode = router.getModeByName("mbta_bus")) && (mode.enabled = config.modeMbtaBus || true);
-			(mode = router.getModeByName("mbta_commuter")) && (mode.enabled = config.modeMbtaCommuter || true);
+				// transit modes
+				(mode = router.getModeByName("bike")) && (mode.enabled = config.modeBike || true);
+				(mode = router.getModeByName("mbta_subway")) && (mode.enabled = config.modeMbtaSubway || true);
+				(mode = router.getModeByName("mbta_bus")) && (mode.enabled = config.modeMbtaBus || true);
+				(mode = router.getModeByName("mbta_commuter")) && (mode.enabled = config.modeMbtaCommuter || true);
 
-			// configure transit layer
-			if (config.start) {
-				layer_transit.buildOverlay(parseInt(config.start, 10));
-			}
+				// configure transit layer
+				if (config.start) {
+					layer_transit.buildOverlay(parseInt(config.start, 10));
+				}
 
-			// resize map
-			if (config.resize !== false) {
-				map.flyToBounds(layer_transit.getBounds());
-			}
+				// resize map
+				if (config.resize !== false) {
+					map.flyToBounds(layer_transit.getBounds());
+				}
 
-			// TODO: sync layer state to explore interface
+				// TODO: sync layer state to explore interface
+			});
 		},
 		configureMap: function(config) {
+			// configure exploration layers
 			this.configureExploreLayer(config.toolExplore || false);
 			this.configureTransitLayer(config.toolTransit || false);
+
+			// move map view
+			if (config.view) {
+				if ("default" === config.view) {
+					this.mapDefaultView();
+				}
+				else if ($.isArray(config.view)) {
+					if ($.isArray(config.view[0])) {
+						// bounds
+						map.flyToBounds(config.view);
+					}
+					else {
+						// center
+						map.flyTo(config.view);
+					}
+				}
+			}
 		},
 		showOverlayError: function(message) {
 			// TODO: turn into nice map overlay, then fade out

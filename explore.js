@@ -1370,6 +1370,11 @@ function resetMap() {
 //---END MAP DRAWING FUNCTIONS
 
 function addToMap(new_map) {
+    // already added (singleton)
+    if (map) {
+        return $.Deferred().resolve().promise();
+    }
+
     map = new_map;
 
 	var loading = createLoadingOverlay(map.getContainer());
@@ -1381,7 +1386,7 @@ function addToMap(new_map) {
 	map.on('zoomend', redraw);
 
     // load data source
-	DataSource.loadData("data/trips.bin", "data/stations.json")
+	var ret = DataSource.loadData("data/trips.bin", "data/stations.json")
 		.done(function() {
 		
 			// LOADED, READY TO GO
@@ -1498,6 +1503,8 @@ function addToMap(new_map) {
         'js_member_all':true,
         'js_gender_all':true
     });
+
+    return ret;
 }
 
 // export global object providing an API into

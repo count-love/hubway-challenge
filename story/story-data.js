@@ -6,7 +6,6 @@ jQuery(function($) {
 
 	Story.getPane("two").configure({
 		map: {
-			view: "default",
 			toolTransit: {
 				source: "data/directions-s.json",
 				start: 6555,
@@ -19,18 +18,15 @@ jQuery(function($) {
 	Story.getPane("three").configure({
 		map: {
 			view: "default",
-			toolTransit: {
-				source: "data/directions-s.json",
-				start: 5979,
-				mode: "mode"
-			},
-			toolExplore: false
+			toolTransit: false,
+			toolExplore: {
+				stationGroup: "MIT"
+			}
 		}
 	});
 
 	Story.getPane("four").configure({
 		map: {
-			view: "default",
 			toolTransit: {
 				source: "data/directions-l.json",
 				start: 5962,
