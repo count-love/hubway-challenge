@@ -648,7 +648,7 @@
 		this.latMin = Math.min(this.north, this.south);
 		this.latMax = Math.max(this.north, this.south);
 		this.lngMin = Math.min(this.east, this.west);
-		this.lngMax = Math.max(this.north, this.south);
+		this.lngMax = Math.max(this.east, this.west);
 
 		// count
 		this.countWidth = config.count.width;
