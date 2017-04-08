@@ -1,6 +1,8 @@
 // actually install the story
 jQuery(function($) {
 	Story.setupPage("#story");
+	Story.setupTabs("#sidebar-tabs");
+	Story.setupExploreTool("#sidebar-tools");
 
 	// [2016, all times, all stations, starts, 7-clustering]
 	Story.getPane("under-util-1").configure({

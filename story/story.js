@@ -4,7 +4,7 @@
 		initialPane: 0
 	};
 
-	var $story, $container;
+	var $story, $container, $explore;
 	var panes = [], active = -1;
 	var map;
 
@@ -118,6 +118,80 @@
 		}
 	}
 
+	// add a "loading" message over the map
+	function _createLoadingOverlay(obj) {
+		var ret = $();
+
+		$(obj).each(function() {
+			var $obj = $(this);
+
+			// get position information
+			var pos = $obj.position();
+			pos.width = $obj.width();
+			pos.height = $obj.height();
+			pos.lineHeight = pos.height + "px"; // same line height
+
+			// configure overlay
+			var el = $('<div class="loading-overlay">Loading...</div>').insertAfter($obj).css(pos);
+
+			// add element
+			ret = ret.add(el);
+		});
+
+		return ret;
+	}
+
+	function _setIsExploring(new_is_exploring) {
+		// already set
+		if (new_is_exploring === is_exploring) return;
+
+		// slideover with tools
+		var $st = $("#sidebar-tools").show(); // , width = $st.width();
+
+		if (new_is_exploring) {
+			// disable story pane
+			if (0 <= active) {
+				_configurePaneActive(panes[active], false);
+			}
+
+			// animate
+			//$st.css("right", 0 - width).animate({right: 0}, 350);
+
+			// just show
+			$st.show();
+
+			// start exploration
+			if (layer_transit) {
+				layer_transit.options.listenClick = true;
+			}
+		}
+		else {
+			// stop exploration
+			if (layer_transit) {
+				layer_transit.options.listenClick = false;
+			}
+
+			// animate out
+			//$st.css("right", 0).animate({right: 0 - width}, 350, "swing", function() {
+			//	$st.hide();
+			//});
+
+			$st.hide();
+
+			// enable story pane
+			if (0 <= active) {
+				_configurePaneActive(panes[active], true);
+			}
+		}
+
+		// toggle buttons
+		var buttons = $("[data-story-mode]");
+		buttons.closest("li").toggleClass("active", !new_is_exploring);
+		buttons.filter("[data-story-mode=explore]").closest("li").toggleClass("active", new_is_exploring);
+
+		is_exploring = new_is_exploring;
+	}
+
 	var onMouseWheelStop = _debounce(function() {
 		// time
 		var time = Date.now() - scroll_start;
@@ -158,6 +232,9 @@
 	}, 100);
 
 	function onMouseWheel(ev) {
+		// is exploring? disable mouse wheel
+		if (is_exploring) { return; }
+
 		// only vertical scroll
 		if (0 === ev.deltaY) { return; }
 
@@ -226,6 +303,76 @@
 
 		// update styling
 		pane.$el.find("[data-story-alt]").removeClass("active").filter("[data-story-alt='" + alt + "']").addClass("active");
+	}
+
+	function onClickMode(ev) {
+		ev.preventDefault();
+
+		var new_mode = $(this).data("story-mode");
+		_setIsExploring("explore" === new_mode);
+	}
+
+	function onExploreDisable(ev) {
+		var layer = $(ev.target).data("story-layer");
+		if (!layer) { return; }
+
+		switch (layer) {
+			case "explore":
+				if (ExploreTool) {
+					ExploreTool.clearMap();
+				}
+				break;
+
+			case "transit":
+				if (layer_transit) {
+					layer_transit.clearOverlay();
+					layer_transit.options.listenClick = false;
+				}
+		}
+	}
+
+	function onExploreEnable(ev) {
+		var layer = $(ev.target).data("story-layer");
+		if (!layer) { return; }
+
+		var loading;
+
+		switch (layer) {
+			case "explore":
+				// already installed?
+				if (installed_explore) {
+					// show stations... TODO: might do weird things if something already drawn?
+					ExploreTool.showStations();
+				}
+				else {
+					loading = _createLoadingOverlay(map.getContainer());
+					$.when(Story.installExploreLayer())
+						.done(function() {
+							// remove loading
+							loading.remove();
+						});
+				}
+				break;
+
+			case "transit":
+				if (layer_transit) {
+					// already loaded
+					layer_transit.options.listenClick = true;
+				}
+				else {
+					loading = _createLoadingOverlay(map.getContainer());
+					$.when(Story.installTransitLayer())
+						.done(function() {
+							// remove loading
+							loading.remove();
+
+							// listen for click
+							if (layer_transit) {
+								layer_transit.options.listenClick = true;
+							}
+						});
+				}
+		}
 	}
 
 	var root = this;
@@ -328,6 +475,17 @@
 			});
 			$story.on("click", "[data-story-alt]", onClickAlternate);
 		},
+		setupTabs: function(el) {
+			$(el).on("click", "[data-story-mode]", onClickMode);
+		},
+		setupExploreTool: function(el) {
+			// explore tool
+			$explore = $(el);
+
+			// listen for toggling collapsed
+			$explore.on("show.bs.collapse", onExploreEnable);
+			$explore.on("hide.bs.collapse", onExploreDisable);
+		},
 		onResize: function() {
 			// get height
 			pane_height = $story.height();
@@ -389,9 +547,14 @@
 			}
 
 			// return promise
-			return ExploreTool.addToMap(map).done(function() {
-				installed_explore = true;
-			});
+			return ExploreTool
+				.addToMap(map)
+				.done(function() {
+					installed_explore = true;
+				})
+				.fail(function() {
+					Story.showOverlayError("Unable to load ride information. Please try refreshing.");
+				});
 		},
 		configureExploreLayer: function(config) {
 			if (false === config) {

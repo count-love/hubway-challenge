@@ -7,22 +7,50 @@ html, body {
 }
 
 #map {
-    width: 70%;
+    width: 65%;
     height: 100%;
     position: absolute;
     top: 0;
     left: 0;
 }
 
-.sidebar {
-    width: 30%;
+.sidebar, #sidebar-tabs {
     position: absolute;
-    top: 0;
+    width: 35%;
     right: 0;
-    height: 100%;
     background-color: #fff;
     border-left: 1px solid black;
+    overflow: hidden;
+}
+
+.sidebar {
+    top: 112px;
+    bottom: 0;
     padding: 10px;
+}
+
+#sidebar-story {
+    z-index: 2;
+}
+
+#sidebar-tools {
+    z-index: 3;
+    overflow-y: auto;
+}
+
+#sidebar-tabs {
+    position: absolute;
+    top: 0;
+    padding: 10px 10px 0 10px;
+    height: 112px;
+    overflow: hidden;
+    z-index: 4;
+}
+
+#sidebar-tabs h1 {
+    margin: 0 0 10px 0;
+    font-size: 32px;
+    line-height: 40px;
 }
 
 #sidebar-story {
@@ -133,10 +161,10 @@ form > div {
 @media screen and (min-width: 1200px) {
     #map {
         width: auto;
-        right: 360px;
+        right: 420px;
     }
-    .sidebar {
-        width: 360px;
+    .sidebar, #sidebar-tabs {
+        width: 420px;
     }
 }
 

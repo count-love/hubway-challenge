@@ -38,6 +38,14 @@
 </head>
 <body>
 <div id="map"></div>
+<div id="sidebar-tabs">
+    <!-- TODO: replace with a little logo and an about link? -->
+    <h1>Hubway Challenge</h1>
+    <ul class="nav nav-tabs nav-justified">
+        <li role="presentation" class="active"><a href="#" data-story-mode="story">Findings</a></li>
+        <li role="presentation"><a href="#" data-story-mode="explore">Explore</a></li>
+    </ul>
+</div>
 <div class="sidebar" id="sidebar-story">
     <div id="story">
         <div class="story-container">
@@ -101,7 +109,7 @@
         <div class="panel-heading" role="tab" id="tool-explore-head">
             <h4 class="panel-title"><a role="button" data-toggle="collapse" href="#tool-explore" aria-expanded="true" aria-controls="tool-explore">Explore Trips</a></h4>
         </div>
-        <div id="tool-explore" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-explore-head">
+        <div id="tool-explore" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-explore-head" data-story-layer="explore">
             <div class="panel-body">
                 <!-- start explore interface -->
                 <div class="filter btn-group" role="button">
@@ -144,7 +152,7 @@
         <div class="panel-heading" role="tab" id="tool-transit-head">
             <h4 class="panel-title"><a role="button" data-toggle="collapse" href="#tool-transit" aria-expanded="true" aria-controls="tool-transit">Getting Around</a></h4>
         </div>
-        <div id="tool-transit" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-transit-head">
+        <div id="tool-transit" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-transit-head" data-story-layer="transit">
             <div class="panel-body">
                 <!-- start transit interface -->
                 <form>
