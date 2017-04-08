@@ -2,8 +2,56 @@
 jQuery(function($) {
 	Story.setupPage("#story");
 
-	//Story.getPane("")
+	// [2016, all times, all stations, starts, 7-clustering]
+	Story.getPane("under-util-1").configure({
+		map: {
+			view: "default",
+			toolExplore: {
+				statistic: "starts",
+				clusters: 7
+			}
+		}
+	}).addAlternate("stops", {
+		map: {
+			view: "default",
+			toolExplore: {
+				statistic: "stops",
+				clusters: 7
+			}
+		}
+	});
 
+	Story.getPane("under-util-2").configure({
+		map: {
+			view: "default",
+			toolExplore: {
+				statistic: "utilization"
+			}
+		}
+	});
+
+	Story.getPane("under-util-3").configure({
+		map: {
+			view: "default",
+			toolExplore: {
+				statistic: "utilization",
+				clusters: 7
+			}
+		}
+	});
+
+	Story.getPane("under-util-dana-park").configure({
+		map: {
+			view: "default",
+			toolTransit: {
+				source: "data/directions-s.json",
+				start: 4181,
+				resize: false
+			}
+		}
+	});
+
+	/*
 	Story.getPane("two").configure({
 		map: {
 			toolTransit: {
@@ -35,6 +83,7 @@ jQuery(function($) {
 			toolExplore: false
 		}
 	});
+	*/
 
 	// set initial pane
 	Story.setActivePane(0, false);

@@ -1558,6 +1558,21 @@ root.ExploreTool = {
 		    redraw();
 	    }
     },
+    setAllStations: function(should_redraw) {
+	    // suppress redraw
+	    selectAllStations = true;
+
+	    // add new stations
+	    Object.keys(Hubway.stations).forEach(selectStation);
+
+	    // stop suppressing redraw
+	    selectAllStations = false;
+
+	    // redraw map
+	    if ("undefined" === typeof should_redraw || false !== should_redraw) {
+		    redraw();
+	    }
+    },
     setStationGroupByLabel: function(label, should_redraw) {
         for (var i = 0; i < stationGroups.length; ++i) {
             if (label === stationGroups[i].label) {

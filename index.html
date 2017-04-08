@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
+
     <title>Hubway</title>
 
     <link rel="stylesheet" href="external/bootstrap/3.3.7/bootstrap.css" type="text/css">
@@ -9,6 +11,7 @@
 
     <!-- libraries for page-->
     <script src="external/jquery/2.1.1/jquery.js"></script>
+    <script src="external/jquery-ui/1.12.1/jquery-ui.js"></script> <!-- SIMPLIFY! just for easing -->
     <script src="external/bootstrap/3.3.7/bootstrap.js"></script> <!-- potentially simplify, only use collapse -->
     <script src="external/leaflet/1.0.3/leaflet.js"></script>
     <script src="external/jquery.mousewheel/3.1.13/jquery.mousewheel.js"></script>
@@ -19,8 +22,6 @@
     <script src="external/leaflet-curve/leaflet.curve.js"></script>
 
     <!-- for exploration -->
-    <script src="external/jquery-ui/1.12.1/jquery-ui.js"></script> <!-- potentially simplify, use slider -->
-    <script src="external/jquery.ui.touch-punch/4bc0091/jquery.ui.touch-punch.js"></script>
     <script src="external/jdataview/2.5.0/jdataview.js"></script>
     <script src="external/jbinary/2.1.3/jbinary.js"></script>
 
@@ -40,30 +41,54 @@
 <div class="sidebar" id="sidebar-story">
     <div id="story">
         <div class="story-container">
-            <div class="story-pane" data-pane="one">
-                <h2>Pane 1</h2>
+            <div class="story-pane" data-pane="intro">
+                <h2>What is extraordinary?</h2>
                 <div class="story-body">
-                    <p>Lorem ipsum test blah blah blah.</p>
+                    <p>As engineers and scientists with a keen interest in civic responsibility and public policy, we
+                        searched through the last six years of Hubway data to find the unusual and the extraordinary.
+                        With the curiosity of a five-year old, we asked "Where?" and “Why?” and "How?" at every turn of
+                        our exploration. Please join us on our adventure through five million Hubway trips as we share
+                        what we asked, what we learned, and what we built.</p>
                 </div>
             </div>
-            <div class="story-pane" data-pane="two">
-                <h2>Pane 2</h2>
+            <div class="story-pane" data-pane="under-util-1">
+                <h2>Are any stations underutilized inside the city?</h2>
                 <div class="story-body">
-                    <p>Yada yada test blah blah blah.</p>
+                    <p>By plotting total <a data-story-alt="default">starts</a> and <a data-story-alt="stops">stops</a>
+                        for each station, we confirmed our intuition that stations in
+                        the middle of the Hubway network typically have the highest number of riders (and stations at
+                        the edge of the Hubway network have the fewest). We wondered if we could find any stations that
+                        broke this pattern: are there any stations inside the city that are underused relative to the
+                        stations nearby? And if so, why?</p>
                 </div>
             </div>
-            <div class="story-pane" data-pane="three">
-                <h2>Pane 3</h2>
+            <div class="story-pane" data-pane="under-util-2">
+                <h2>Are any stations underutilized inside the city?</h2>
                 <div class="story-body">
-                    <p>Lorem ipsum test blah blah blah.</p>
-                    <p>Lorem ipsum test blah blah blah.</p>
+                    <p>To answer this question, we measured each station’s “utilization” by counting the number of
+                        starts and stops and dividing by the number of docks at the station.</p>
                 </div>
             </div>
-            <div class="story-pane" data-pane="four">
-                <h2>Pane 4</h2>
+            <div class="story-pane" data-pane="under-util-3"><!-- potentially combine with previous? -->
+                <h2>Are any stations underutilized inside the city?</h2>
                 <div class="story-body">
-                    <p>Yada yada test blah blah blah.</p>
-                    <p>Yada yada test blah blah blah.</p>
+                    <p>Then, we searched for stations with unusually small “utilization” rates by grouping (clustering)
+                        together stations based on their utilization rates and searching for small circles surrounded by
+                        large circles. We found the following odd stations: Dana Park, in Cambridgeport; Third/Binney,
+                        Sixth/Binney, and Kendall St. in East Cambridge; New Balance, on Newbury St.; and Brookline at
+                        Burlington, near Fenway.</p>
+                </div>
+            </div>
+            <div class="story-pane" data-pane="under-util-dana-park">
+                <h2>Dana Park, Cambridge</h2>
+                <div class="story-body">
+                    <p>We estimated average commute times based on the Hubway data and combined this information with
+                        walking and public transit data to determine the fastest mode of transportation from any
+                        arbitrary start location in the greater Boston area to any other location. From Cambridgeport,
+                        Hubway often is the fastest mode of transportation to Somerville, Cambridge, Boston, and
+                        Brookline. Only a few distant destinations, like Chelsea and East Boston, are faster to get to
+                        via subway. Given this time advantage, why is the Dana Park station utilized so little relative
+                        to other nearby stations?</p>
                 </div>
             </div>
         </div>

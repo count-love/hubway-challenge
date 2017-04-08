@@ -60,6 +60,11 @@
 			pane.config.activated.call(pane);
 		}
 
+		// UPDATE ALTERNATES
+		if (active && pane.hasAlternate) {
+			pane.$el.find("[data-story-alt]").removeClass("active").filter("[data-story-alt=default]").addClass("active");
+		}
+
 		// UPDATE NAV LINKS
 		// is first?
 		if (pane === panes[0]) {
@@ -192,6 +197,37 @@
 		onMouseWheelStop();
 	}
 
+	function onClickAlternate(ev) {
+		ev.preventDefault();
+
+		// needs active pane
+		if (active < 0) {
+			return;
+		}
+
+		// switch pane
+		var $this = $(this), pane = panes[active], alt = $this.data("story-alt");
+
+		// already listed as active
+		if ($this.hasClass("active")) {
+			return;
+		}
+
+		// set alternate
+		if ("default" === alt) {
+			Story.configureMap(pane.config.map);
+		}
+		else if (alt in pane.altConfigs) {
+			Story.configureMap(pane.altConfigs[alt].map)
+		}
+		else {
+			return;
+		}
+
+		// update styling
+		pane.$el.find("[data-story-alt]").removeClass("active").filter("[data-story-alt='" + alt + "']").addClass("active");
+	}
+
 	var root = this;
 	var Story = {
 		mapDefaultView: function() {
@@ -237,13 +273,24 @@
 			$container = $story.children(".story-container");
 
 			// indicators
-			var indicators = $('<ul class="story-indicators">' + (new Array(panes.length + 1)).join('<li></li>') + '</ul>');
+			var indicators = $('<ul class="story-indicators"></ul>');
 
 			// get panes and set initial size
 			pane_height = $story.height();
 			panes = $container.children(".story-pane").get().map(function(el) {
-				var pane = new StoryPane(el, $('<li></li>').appendTo(indicators));
+				var indicator = $('<li></li>').appendTo(indicators);
+				var pane = new StoryPane(el, indicator);
+
+				// set height
 				pane.$el.css("height", pane_height);
+
+				// add tooltip
+				indicator.tooltip({
+					placement: "left",
+					title: pane.$el.find("h2").first().text(),
+					container: "#story"
+				});
+
 				return pane;
 			});
 
@@ -254,7 +301,9 @@
 			});
 
 			// navigation links
-			$story.on("click", "[data-story-nav]", function() {
+			$story.on("click", "[data-story-nav]", function(ev) {
+				ev.preventDefault();
+
 				var nav_to = $(this).data("story-nav");
 
 				if ("next" === nav_to) {
@@ -277,6 +326,7 @@
 					}
 				}
 			});
+			$story.on("click", "[data-story-alt]", onClickAlternate);
 		},
 		onResize: function() {
 			// get height
@@ -355,10 +405,18 @@
 			// install
 			$.when(this.installExploreLayer()).done(function() {
 				if (config.stations) {
-					ExploreTool.setStations(config.stations, false);
+					if ("all" === config.stations) {
+						ExploreTool.setAllStations(false);
+					}
+					else {
+						ExploreTool.setStations(config.stations, false);
+					}
 				}
 				else if (config.stationGroup) {
 					ExploreTool.setStationGroupByLabel(config.stationGroup, false);
+				}
+				else {
+					ExploreTool.setAllStations(false);
 				}
 
 				// set number of clusters
@@ -489,6 +547,10 @@
 
 		// configuration
 		this.config = {};
+
+		// allow specifying alternate configurations
+		this.hasAlternate = false;
+		this.altConfigs = {};
 	}
 
 	StoryPane.prototype.isActive = function() {
@@ -497,8 +559,14 @@
 
 	StoryPane.prototype.configure = function(config) {
 		this.config = config;
+		return this;
 	};
 
+	StoryPane.prototype.addAlternate = function(name, config) {
+		this.hasAlternate = true;
+		this.altConfigs[name] = config;
+		return this;
+	};
 
 
 	/* SECTION: TRANSIT LAYER CODE */

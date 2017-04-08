@@ -91,9 +91,21 @@ html, body {
 }
 
 .story-pane {
-    padding: 10px;
+    padding: 30px 10px;
     overflow: hidden;
     position: relative;
+}
+
+.story-pane [data-story-alt] {
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.story-pane [data-story-alt].active {
+    color: black;
+    text-decoration: none;
+    cursor: default;
 }
 
 .sidebar h2 {
@@ -103,6 +115,18 @@ html, body {
 
 form > div {
     margin-top: 20px;
+}
+
+/* loading widget */
+.loading-overlay {
+    position: absolute;
+    text-align: center;
+    vertical-align: middle;
+    z-index: 1000;
+    background-color: rgba(255, 255, 255, 0.7);
+    font-size: 36px;
+    font-weight: 100;
+    font-style: italic;
 }
 
 /* extra large screens */
