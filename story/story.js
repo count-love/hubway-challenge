@@ -35,6 +35,7 @@
 	}
 
 	function _configurePaneActive(pane, active) {
+		pane.$indicator.toggleClass("active", active);
 	}
 
 	function _transitionToIndex(new_active, animate) {
@@ -202,12 +203,21 @@
 			$story = $(el);
 			$container = $story.children(".story-container");
 
+			// indicators
+			var indicators = $('<ul class="story-indicators">' + (new Array(panes.length + 1)).join('<li></li>') + '</ul>');
+
 			// get panes and set initial size
 			pane_height = $story.height();
 			panes = $container.children(".story-pane").get().map(function(el) {
-				var pane = new StoryPane(el);
+				var pane = new StoryPane(el, $('<li></li>').appendTo(indicators));
 				pane.$el.css("height", pane_height);
 				return pane;
+			});
+
+			// append indicators
+			indicators.appendTo($story).on("click", "li", function() {
+				var index = $(this).index();
+				Story.setActivePane(index);
 			});
 		},
 		onResize: function() {
@@ -270,9 +280,10 @@
 	root.Story = Story;
 
 	// create class for story panes
-	function StoryPane(el) {
+	function StoryPane(el, indicator) {
 		// create element
 		this.$el = $(el);
+		this.$indicator = $(indicator);
 
 		// store name
 		this.name = this.$el.data("pane");

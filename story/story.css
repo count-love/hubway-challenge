@@ -39,7 +39,35 @@ html, body {
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
+    right: 20px; /* space for indicators */
+}
+
+.story-indicators {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0 0;
+    transform: translateY(-50%); /* vertically center */
+}
+
+.story-indicators li {
+    width: 10px;
+    height: 10px;
+    margin: 11px 1px;
+    text-indent: -999px;
+    cursor: pointer;
+    background-color: transparent;
+    border: 1px solid black;
+    border-radius: 10px;
+}
+
+.story-indicators li.active {
+    width: 12px;
+    height: 12px;
+    margin: 10px 0;
+    background-color: black;
 }
 
 .story-pane {
