@@ -36,6 +36,19 @@
 
 	function _configurePaneActive(pane, active) {
 		pane.$indicator.toggleClass("active", active);
+
+
+
+		// UPDATE NAV LINKS
+		// is first?
+		if (pane === panes[0]) {
+			$("[data-story-nav=prev]").toggleClass("disabled", active);
+		}
+
+		// is last?
+		if (pane === panes[panes.length - 1]) {
+			$("[data-story-nav=next]").toggleClass("disabled", active);
+		}
 	}
 
 	function _transitionToIndex(new_active, animate) {
@@ -198,6 +211,7 @@
 			// add events
 			$(window).on("resize", this.onResize);
 			$("body").on("mousewheel", onMouseWheel);
+			// TODO: add touch controls for mobile
 
 			// get story element
 			$story = $(el);
@@ -218,6 +232,31 @@
 			indicators.appendTo($story).on("click", "li", function() {
 				var index = $(this).index();
 				Story.setActivePane(index);
+			});
+
+			// navigation links
+			$story.on("click", "[data-story-nav]", function() {
+				var nav_to = $(this).data("story-nav");
+
+				if ("next" === nav_to) {
+					if (active < (panes.length - 1)) {
+						Story.setActivePane(active + 1);
+					}
+				}
+				else if ("prev" === nav_to) {
+					if (active > 0) {
+						Story.setActivePane(active - 1);
+					}
+				}
+				else {
+					var index = parseInt(nav_to, 10);
+					if (index >= 0 && index < panes.length) {
+						Story.setActivePane(index);
+					}
+					else {
+						Story.setActivePane(nav_to);
+					}
+				}
 			});
 		},
 		onResize: function() {

@@ -70,6 +70,26 @@ html, body {
     background-color: black;
 }
 
+.story-nav {
+    position: absolute;
+    text-align: center;
+    left: 0;
+    right: 0;
+}
+
+.story-nav.story-prev {
+    top: 0;
+}
+
+.story-nav.story-next {
+    bottom: 0;
+}
+
+.story-nav .disabled {
+    cursor: default;
+    color: #ccc;
+}
+
 .story-pane {
     padding: 10px;
     overflow: hidden;
