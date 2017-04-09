@@ -8,8 +8,8 @@
 	var panes = [], active = -1;
 	var map;
 
-	// blocking modes
-	var is_redrawing = false, is_exploring = false;
+	// v
+	var is_exploring = false;
 
 	// UI math and variables
 	var pane_height;
@@ -232,8 +232,8 @@
 	}, 100);
 
 	function onMouseWheel(ev) {
-		// is redrawing? or exploring? disable mouse wheel
-		if (is_exploring || is_redrawing) { return; }
+		// is exploring? disable mouse wheel
+		if (is_exploring) { return; }
 
 		// only vertical scroll
 		if (0 === ev.deltaY) { return; }
@@ -502,7 +502,7 @@
 
 			// resize panes
 			for (var i = 0; i < panes.length; ++i) {
-				panes[i].$el.css("height", pane_height);
+				panes[i].$el.height(pane_height);
 			}
 
 			// adjust active
@@ -575,15 +575,14 @@
 				if (installed_explore) {
 					ExploreTool.clearMap();
 				}
-
-				return true;
+				return;
 			}
 
 			// close in explore
 			$("#tool-explore").addClass("in");
 
 			// install
-			return $.when(this.installExploreLayer()).done(function() {
+			$.when(this.installExploreLayer()).done(function() {
 				if (config.stations) {
 					if ("all" === config.stations) {
 						ExploreTool.setAllStations(false);
@@ -662,15 +661,14 @@
 				if (layer_transit) {
 					layer_transit.clearOverlay();
 				}
-
-				return true;
+				return;
 			}
 
 			// open in explore
 			$("#tool-transit").addClass("in");
 
 			// install
-			return $.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
+			$.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
 				// set mode (do not redraw)
 				layer_transit.setMode(config.mode || "mode", false);
 
@@ -705,20 +703,9 @@
 			});
 		},
 		configureMap: function(config) {
-			// set is redrawing
-			is_redrawing = true;
-			var loading = _createLoadingOverlay(map.getContainer());
-
 			// configure exploration layers
-			setTimeout(function() {
-				$.when(
-					Story.configureExploreLayer(config.toolExplore || false),
-					Story.configureTransitLayer(config.toolTransit || false)
-				).always(function() {
-					loading.remove();
-					is_redrawing = false;
-				});
-			}, 0);
+			this.configureExploreLayer(config.toolExplore || false);
+			this.configureTransitLayer(config.toolTransit || false);
 
 			// move map view
 			if (config.view) {

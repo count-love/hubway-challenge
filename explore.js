@@ -908,7 +908,7 @@ function printTopStations(resultsByStation, sortByDescending, max, printCounts, 
 function setupFilters(defaults) {
 
     Object.keys(queryFilters).forEach(function(group) {
-        var newFilter = '<div class="filter"><div class="btn-group" id="js_' + group + '"></div></div>';
+        var newFilter = '<div class="filter"><div id="js_' + group + '"></div></div>';
         $("#js_filters").append(newFilter);
     });
 
@@ -923,13 +923,13 @@ function setupFilters(defaults) {
             if (tooltip) {
                 filters += "<button class='btn btn-default btn-sm js_" + group + "' id='" + id + "' title='" + tooltip + "'>" + label + "</button>";
             } else {
-                filters += "<button class='btn btn-default btn-sm js_" + group + "' id='" + id + "'>" + label + "</button>";
+                filters += "<button class='btn btn-default btn-sm js_" + group + "' id='" + id + "'>" + label + "</button>";        
             }            
         });
     
         // add buttons to the DOM
         $("#js_"+group).html(filters);
-        $(".btn").tooltip({container: "#js_filters"});
+        $(".btn").tooltip();
     
         // attach event handlers
         queryFilters[group].forEach(function(button) {
