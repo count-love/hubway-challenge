@@ -355,9 +355,14 @@
 				break;
 
 			case "transit":
+				var default_start = [42.350932577852824, -71.08943939208986];
 				if (layer_transit) {
 					// already loaded
 					layer_transit.options.listenClick = true;
+
+					// show overlay
+					layer_transit.buildOverlay(layer_transit.getStart() || default_start);
+					Story.showOverlay("Click the map to set a new start location.", "info");
 				}
 				else {
 					loading = _createLoadingOverlay(map.getContainer());
@@ -369,6 +374,8 @@
 							// listen for click
 							if (layer_transit) {
 								layer_transit.options.listenClick = true;
+								layer_transit.buildOverlay(default_start);
+								Story.showOverlay("Click the map to set a new start location.", "info");
 							}
 						});
 				}
@@ -556,7 +563,7 @@
 					installed_explore = true;
 				})
 				.fail(function() {
-					Story.showOverlayError("Unable to load ride information. Please try refreshing.");
+					Story.showOverlay("Unable to load ride information. Please try refreshing.");
 				});
 		},
 		configureExploreLayer: function(config) {
@@ -632,15 +639,15 @@
 					.done(function() {
 						layer_transit.on("clickoutside", function() {
 							if ("data/directions-s.json" === transit_source) {
-								Story.showOverlayError("The current transit information is limited to the city center. Switch to the metro area to explore a larger area.");
+								Story.showOverlay("The current transit information is limited to the city center. Switch to the metro area to explore a larger area.");
 							}
 							else {
-								Story.showOverlayError("We do not have transit or bike data in that area. Stick a little closer to Boston for best results.");
+								Story.showOverlay("We do not have transit or bike data in that area. Stick a little closer to Boston for best results.");
 							}
 						});
 					})
 					.fail(function() {
-						Story.showOverlayError("Unable to load transit information. Please try refreshing.");
+						Story.showOverlay("Unable to load transit information. Please try refreshing.");
 					});
 			}
 
@@ -730,8 +737,8 @@
 				}
 			}
 		},
-		showOverlayError: function(message, tm) {
-			var msg = $('<div class="overlay-warning"></div>').text(message).appendTo("body");
+		showOverlay: function(message, message_class, tm) {
+			var msg = $('<div class="overlay"></div>').addClass("overlay-" + (message_class || "warning")).text(message).appendTo("body");
 			msg.fadeIn(200, function() {
 				var tmout, close = function() {
 					msg.fadeOut(400, function() {

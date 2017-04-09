@@ -14,8 +14,7 @@ html, body {
     left: 0;
 }
 
-.overlay-warning {
-    background-color: #F15A24;
+.overlay {
     position: absolute;
     bottom: 25px;
     left: 50%;
@@ -30,6 +29,14 @@ html, body {
     border-radius: 4px;
     -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
     box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+}
+
+.overlay-warning {
+    background-color: #F15A24;
+}
+
+.overlay-info {
+    background-color: #0071BC;
 }
 
 .sidebar, #sidebar-tabs {
@@ -132,8 +139,7 @@ html, body {
 }
 
 .story-nav .disabled {
-    cursor: default;
-    color: #ccc;
+    display: none;
 }
 
 .story-pane {
@@ -143,15 +149,18 @@ html, body {
 }
 
 .story-pane [data-story-alt] {
-    color: blue;
-    text-decoration: underline;
+    color: #2f6891;
+    text-decoration: none;
+    border-bottom: dashed 1px #08c;
     cursor: pointer;
 }
 
 .story-pane [data-story-alt].active {
-    color: black;
+    color: #3dbbee;
     text-decoration: none;
+    border-bottom: dashed 1px #08c;
     cursor: default;
+    font-weight: bold;
 }
 
 .sidebar h2 {
@@ -195,7 +204,8 @@ form > div {
 .transit-legend {
     background-color: #eee;
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
-    padding: 2px 8px;
+    border-radius: 4px;
+    padding: 7px 10px;
 }
 
 .transit-legend .swatch {
@@ -204,12 +214,13 @@ form > div {
     display: inline-block;
     vertical-align: middle;
     margin-right: 5px;
+    border-radius: 4px;
 }
 
 .transit-legend h6 {
     font-size: 12px;
     line-height: 1.5;
-    margin: 3px 0 0 0;
+    margin: 0;
     font-weight: bold;
 }
 
