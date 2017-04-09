@@ -11,17 +11,10 @@
 	// blocking modes
 	var is_redrawing = false, is_exploring = false;
 
-	// UI math and variables
-	var pane_height;
-	var scroll_start = null, scroll_offset_last = 0;
-
 	// map tools
 	var installed_explore = false;
 	var transit_source = null;
 	var layer_transit, pane_transit;
-
-	// turn off
-	$.event.special.mousewheel.settings.normalizeOffset = false;
 
 	// debouncing function from John Hann
 	// http://unscriptable.com/index.php/2009/03/20/debouncing-javascript-methods/
@@ -44,6 +37,7 @@
 
 	function _configurePaneActive(pane, active) {
 		pane.$indicator.toggleClass("active", active);
+		pane.$el.toggleClass("inactive", !active);
 
 		// on hide
 		if (!active && pane.config.deactivated) {
@@ -78,10 +72,13 @@
 	}
 
 	function _transitionToIndex(new_active, animate) {
+		// get scroll top
+		var scroll_top = panes[new_active].$el[0].offsetTop - (new_active > 0 ? 20 : 0);
+
 		if ("undefined" === typeof animate || animate) {
 			// animate to position
 			$container.animate({
-				top: pane_height * (0 - new_active)
+				scrollTop: scroll_top
 			}, 300, "easeOutCubic", function() {
 				// no change
 				if (new_active === active) {
@@ -105,7 +102,7 @@
 			}
 
 			// set top
-			$container.css("top", pane_height * (0 - new_active));
+			$container.scrollTop(scroll_top);
 
 			// deactivate old
 			if (0 <= active) {
@@ -193,94 +190,51 @@
 		is_exploring = new_is_exploring;
 	}
 
-	var onMouseWheelStop = _debounce(function() {
-		// time
-		var time = Date.now() - scroll_start;
-		scroll_start = null;
+	var onScrollStop = _debounce(function() {
+		// use scroll
+		var scroll_top = $container.scrollTop(), offset_top;
+		var closest = null, closest_distance, distance;
+		for (var i = 0; i < panes.length; ++i) {
+			offset_top = panes[i].$el[0].offsetTop;
 
-		// distance
-		var distance = scroll_offset_last, distance_abs = Math.abs(distance);
-		scroll_offset_last = 0;
+			// above the fold
+			if (offset_top < (scroll_top - 40)) {
+				continue;
+			}
 
-		// calculate speed
-		var speed = distance / time; // pixels per second
-
-		// start by animating to closest
-		var new_active;
-		if (distance_abs < 0.15 * pane_height) {
-			// snap back to position
-			new_active = active;
-		}
-		else if (distance_abs < 1.55 * pane_height || true) {
-			// move forward or backwards one step based on momentum
-			new_active = active + (distance < 0 ? 1 : -1);
-		}
-		else {
-			// snap to closest
-			new_active = active - Math.round(distance / pane_height);
+			distance = Math.abs(scroll_top - offset_top);
+			if (null === closest || distance < closest_distance) {
+				closest = i;
+				closest_distance = distance;
+			}
 		}
 
-		// constrain
-		if (0 > new_active) {
-			new_active = 0;
+		var new_active = closest;
+		if (new_active !== active) {
+			// deactivate old
+			if (0 <= active) {
+				_configurePaneActive(panes[active], false);
+			}
+
+			// activate new
+			active = new_active;
+			_configurePaneActive(panes[active], true);
 		}
-		else if (new_active >= panes.length) {
-			new_active = panes.length - 1;
+	}, 450);
+
+	function onClickPane(ev) {
+		for (var i = 0; i < panes.length; ++i) {
+			if (panes[i].$el[0] === this) {
+				if (active !== i) {
+					// prevent default
+					ev.preventDefault();
+
+					// transition
+					_transitionToIndex(i, true);
+				}
+				return;
+			}
 		}
-
-		// animate to position
-		_transitionToIndex(new_active, true);
-	}, 100);
-
-	function onMouseWheel(ev) {
-		// is exploring? disable mouse wheel
-		if (is_exploring || is_redrawing) { return; }
-
-		// only vertical scroll
-		if (0 === ev.deltaY) { return; }
-
-		// start
-		if (null === scroll_start) {
-			scroll_start = Date.now();
-			$container.stop(true); // stop animation
-		}
-
-		// calculate distance
-		var distance = ev.deltaY * ev.deltaFactor;
-
-		// new scroll session?
-		if (Math.abs(distance) < Math.abs(scroll_offset_last)) {
-			distance += scroll_offset_last;
-		}
-
-		// limit scrolling to one pane
-		if (distance < (0 - pane_height)) {
-			distance = 0 - pane_height;
-		}
-		else if (distance > pane_height) {
-			distance = pane_height;
-		}
-
-		// new top
-		var top = pane_height * (0 - active) + distance;
-
-		// slow down at edges
-		// TODO: maybe add some elastic feel?
-		if (top > 0) {
-			top = 0;
-		}
-		else if (top < ((1 - panes.length) * pane_height)) {
-			top = (1 - panes.length) * pane_height;
-		}
-
-		// set top position
-		$container.css("top", top);
-
-		// set last distance
-		scroll_offset_last = distance;
-
-		// scrolling stopped (debounced)
-		onMouseWheelStop();
 	}
 
 	function onClickAlternate(ev) {
@@ -293,6 +247,9 @@
 
 		// switch pane
 		var $this = $(this), pane = panes[active], alt = $this.data("story-alt");
+
+		// make sure this is the active pane
+		if (panes[active].$el[0] !== $this.closest(".story-pane")[0]) { return; }
 
 		// already listed as active
 		if ($this.hasClass("active")) {
@@ -423,33 +380,36 @@
 			// set default view
 			this.mapDefaultView();
 
-			// add events
-			$(window).on("resize", this.onResize);
-			$("body").on("mousewheel", onMouseWheel);
-			// TODO: add touch controls for mobile
-
 			// get story element
 			$story = $(el);
 			$container = $story.children(".story-container");
 
+			// add events
+			$(window).on("resize", this.onResize);
+			$container.on("scroll", onScrollStop);
+			$container.on("click", ".story-pane.inactive", onClickPane);
+
 			// indicators
 			var indicators = $('<ul class="story-indicators"></ul>');
 
-			// get panes and set initial size
-			pane_height = $story.height();
+			// get panes and make indicators along the way
 			panes = $container.children(".story-pane").get().map(function(el) {
+				// mark as inactive
+				// create indicator
 				var indicator = $('<li></li>').appendTo(indicators);
+				
+				// build pane
 				var pane = new StoryPane(el, indicator);
-
-				// set height
-				pane.$el.css("height", pane_height);
 
 				// add tooltip
 				indicator.tooltip({
-					placement: "left",
+					placement: "right",
 					title: pane.$el.find("h2").first().text(),
 					container: "#story"
 				});
+
+				// mark as inactive
+				pane.$el.addClass("inactive");
 
 				return pane;
 			});
@@ -463,6 +423,28 @@
 			indicators.appendTo($story).on("click", "li", function() {
 				var index = $(this).index();
 				Story.setActivePane(index);
+			});
+
+			// stop tooltip from interfering with touches
+			var _active_touches = 0, _recent_touches = 0, _clearRecent = _debounce(function() {
+				_recent_touches = 0;
+				}, 400);
+			$("body").on("touchstart", function(ev) {
+				_active_touches = (ev.touches ? ev.touches.length : 1);
+			}).on("touchend", function(ev) {
+				_recent_touches = _active_touches;
+				_active_touches = (ev.touches ? ev.touches.length : 0);
+				_clearRecent();
+			}).on("show.bs.tooltip show.bs.popover", function(ev) {
+				var el = $(ev.target);
+				// no recent touches? doesn't matter...
+				if (0 === _recent_touches) { return; }
+				// has tooltip or popover?
+				if (el.data("tooltip") || el.data("popover")) {
+					// simulate click
+					_recent_touches = 0;
+					el.trigger("click");
+				}
 			});
 
 			// navigation links
@@ -509,19 +491,6 @@
 			addTransitListeners();
 		},
 		onResize: function() {
-			// get height
-			pane_height = $story.height();
-
-			// resize panes
-			for (var i = 0; i < panes.length; ++i) {
-				panes[i].$el.css("height", pane_height);
-			}
-
-			// adjust active
-			if (0 <= active) {
-				$container.css("top", pane_height * (0 - active));
-			}
-
 			// invalidate map size
 			map.invalidateSize();
 		},

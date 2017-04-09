@@ -91,14 +91,16 @@ html, body {
 .story-container {
     position: absolute;
     top: 0;
-    left: 0;
-    right: 20px; /* space for indicators */
+    left: 24px; /* space for indicators */
+    right: 0;
+    bottom: 0;
+    overflow: auto;
 }
 
 .story-indicators {
     position: absolute;
     top: 50%;
-    right: 10px;
+    left: 10px;
     list-style: none;
     padding: 0;
     margin: 0 0 0 0;
@@ -123,29 +125,27 @@ html, body {
     background-color: black;
 }
 
-.story-nav {
-    position: absolute;
-    text-align: center;
-    left: 0;
-    right: 0;
-}
-
-.story-nav.story-prev {
-    top: 0;
-}
-
-.story-nav.story-next {
-    bottom: 0;
-}
-
-.story-nav .disabled {
-    display: none;
-}
-
 .story-pane {
-    padding: 30px 10px;
-    overflow: hidden;
-    position: relative;
+    padding: 10px;
+    margin-bottom: 150px;
+
+    -webkit-transition: opacity 0.5s ease-in-out;
+    -moz-transition: opacity 0.5s ease-in-out;
+    -o-transition: opacity 0.5s ease-in-out;
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* inactive */
+.story-pane.inactive {
+    opacity: 0.2;
+    filter: alpha(opacity=20);
+    cursor: pointer;
+}
+.story-pane.inactive a {
+    color: #aaa !important;
+}
+.story-pane.inactive [data-story-alt] {
+    border-bottom-color: #aaa !important;
 }
 
 .story-pane [data-story-alt] {
@@ -197,7 +197,82 @@ form > div {
 
 /* mobile */
 @media screen and (max-width: 979px) {
-    /* TODO: write me */
+    .story-container {
+        position: absolute;
+        top: 0;
+        left: 30px;
+    }
+
+    .story-indicators li {
+        width: 13px;
+        height: 13px;
+        margin: 11px 1px;
+        text-indent: -999px;
+        cursor: pointer;
+        background-color: transparent;
+        border: 1px solid black;
+        border-radius: 10px;
+    }
+
+    .story-indicators li.active {
+        width: 15px;
+        height: 15px;
+        margin: 10px 0;
+        background-color: black;
+    }
+}
+
+@media screen and (max-width: 979px) and (orientation: portrait) {
+    #map {
+        position: absolute;
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: auto;
+        height: 45%;
+    }
+
+    .sidebar {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: auto;
+        width: auto;
+        height: 55%;
+        background-color: #fff;
+        border-left: 0;
+        border-bottom: 1px solid black;
+        padding: 10px;
+    }
+
+    #sidebar-story {
+        z-index: 2;
+    }
+
+    #sidebar-tools {
+        z-index: 3;
+        overflow-y: auto;
+    }
+
+    #sidebar-tabs {
+        display: none; /* TODO: figure outalternate configuration */
+    }
+}
+
+@media screen and (max-width: 767px) and (orientation: portrait) {
+    /* closer together */
+    .story-pane {
+        margin-bottom: 75px;
+    }
+
+    #map {
+        height: 40%;
+    }
+
+    .sidebar {
+        height: 60%;
+    }
 }
 
 /* filters */
@@ -222,8 +297,9 @@ form > div {
     background-color: #eee;
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
     border-radius: 4px;
-    padding: 7px 10px;
+    padding: 5px 10px 7px 10px;
 }
+
 .transit-legend.off {
     display: none;
 }
