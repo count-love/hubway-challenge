@@ -62,7 +62,8 @@
 			opacityMode: 0.3,
 			opacityTime: 0.6,
 			listenClick: true,
-			legend: true
+			legend: true,
+			drawStart: true
 		},
 		initialize: function(router, options) {
 			// private properties
@@ -384,6 +385,18 @@
 					this._drawMode();
 					this._legend && this._legend.redrawKey(this.options.modeNames, this.options.modeColors);
 					break;
+			}
+
+			// draw starting location
+			if (this.options.drawStart && this._start) {
+				this.addLayer(L.circleMarker(this._start, {
+					radius: 9,
+					color: '#fff',
+					weight: 4,
+					fill: true,
+					fillColor: '#047cff',
+					fillOpacity: 1
+				}));
 			}
 		}
 	});

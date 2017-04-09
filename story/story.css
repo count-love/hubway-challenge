@@ -209,7 +209,7 @@ form > div {
 .transit-legend h6 {
     font-size: 12px;
     line-height: 1.5;
-    margin: 4px 0 0 0;
+    margin: 3px 0 0 0;
     font-weight: bold;
 }
 
@@ -229,4 +229,3 @@ form > div {
 .transit-legend .high {
     float: right;
 }
-
