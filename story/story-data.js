@@ -41,7 +41,8 @@ jQuery(function($) {
 			view: [[42.350012811890636, -71.12578868865968], [42.36942019026506, -71.08888149261476]],
 			toolExplore: {
 				statistic: "utilization",
-				clusters: 7
+				clusters: 7,
+				highlightStation: 159
 			}
 		}
 	}).addAlternate("eastCambridge", {
@@ -57,7 +58,8 @@ jQuery(function($) {
 			view: [[42.339450396797275, -71.1198663711548], [42.35886103664428, -71.08295917510988]],
 			toolExplore: {
 				statistic: "utilization",
-				clusters: 7
+				clusters: 7,
+				highlightStation: 47
 			}
 		}
 	});
@@ -68,7 +70,7 @@ jQuery(function($) {
 			toolTransit: {
 				source: "data/directions-s.json",
 				start: 4181,
-				resize: false
+				resize: false,
 			}
 		}
 	}).addAlternate("danaParkUtilization", {
@@ -76,7 +78,8 @@ jQuery(function($) {
 			view: [[42.350012811890636, -71.12578868865968], [42.36942019026506, -71.08888149261476]],
 			toolExplore: {
 				statistic: "utilization",
-				clusters: 7
+				clusters: 7,
+				highlightStation: 159				
 			}
 		}
 	});
@@ -104,7 +107,8 @@ jQuery(function($) {
 			view: [[42.339450396797275, -71.1198663711548], [42.35886103664428, -71.08295917510988]],
             toolExplore: {
 				statistic: "utilization",
-				clusters: 7
+				clusters: 7,
+				highlightStation: 47				
 			}        
 		}
 	}).addAlternate("popular", {

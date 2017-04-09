@@ -47,8 +47,8 @@ var maxStations = 5;
 var markerZoom = 10;
 var defaultMarkerRadius = 7.5;
 
-var cssColors = ['navy','blue','green','blueviolet','aquamarine','maroon','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
-// 'purple','fuchsia','gray','white','beige','olive','yellow','black','silver','red','azure','lime','antiquewhite','beige','bisque','blanchedalmond''teal','aqua',
+var cssColors = ['navy','blue','green','blueviolet','aquamarine','maroon','goldenrod','burlywood','cadetblue','chartreuse'];
+
 
 // available filter options for queries
 var queryFilters = {
@@ -101,16 +101,15 @@ var queryFilters = {
 };
 
 var stationGroups = [
-    {'label': 'Coffee, Coffee', stops: [147, 184, 106, 62]},
-    {'label': 'Harvard', stops: [6, 7, 15, 131, 145, 146, 147, 148, 150, 151, 153, 154, 166, 192]},
-    {'label': 'MIT', stops: [135, 136, 137, 138, 165, 169, 170]},
-    {'label': 'Tufts', stops: [182, 183, 185, 181]},
-    {'label': 'Central Square', stops: [29, 142, 143]},
+    {'label': 'Coffee, Coffee', stops: [147, 184, 106]},
     {'label': 'Boston', stops: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 191, 192, 193, 194, 196, 197]},
     {'label': 'Fort Point', stops: [68, 90, 84, 109, 1, 36, 42, 88, 78, 77]},    
     {'label': 'Brookline', stops: [129, 130, 131, 132, 188, 190]},
     {'label': 'Cambridge', stops: [133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175]},
-    {'label': 'Somerville', stops: [176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 189, 195]}    
+    {'label': 'Somerville', stops: [176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 189, 195]},
+    {'label': 'MIT', stops: [135, 136, 137, 138, 165, 169, 170]},
+    {'label': 'Harvard', stops: [6, 7, 15, 131, 145, 146, 147, 148, 150, 151, 153, 154, 166, 192]},
+    {'label': 'Tufts', stops: [182, 183, 185, 181]}
 ];
 
 var kMeansGroups = [0, 3, 5, 7, 10];
@@ -379,7 +378,8 @@ var illustrations = {
 
 	'starts': {
 	    group: 'trips',
-	    unit: ' trips/day',
+	    tooltip: 'total trips started at each station',
+	    unit: ' starts/day',
 	    unitRounding: 0,
 	    markerScale: 10,
 	    useRawMarkerSize: false,
@@ -415,7 +415,8 @@ var illustrations = {
 	
 	'stops': {
 	    group: 'trips',
-	    unit: 'trips/day',
+	    tooltip: 'total trips ended at each station',
+	    unit: 'stops/day',
 	    unitRounding: 0,
 	    markerScale: 10,
 	    useRawMarkerSize: false,
@@ -459,6 +460,7 @@ var illustrations = {
 	    
 	'duration': {
 	    group: 'trips',
+	    tooltip: 'average duration of trips started from each station',
 	    unit: 'minutes',
 	    unitRounding: 1,
 	    markerScale: 10,
@@ -491,6 +493,7 @@ var illustrations = {
 	
 	'utilization': {
 	    group: 'trips',
+	    tooltip: 'total trip starts and stops per station, normalized by dock size',
 	    unit: 'trips/dock-hour',
 	    unitRounding: 3,
 	    markerScale: 0.0002,
@@ -631,6 +634,7 @@ var illustrations = {
 	
     'popular-routes': {
         group: 'trips',
+        tooltip: 'top five most popular destinations from each station',
         buttonName: 'popular routes',
 	    unit: 'trips',
 	    unitRounding: 0,
@@ -688,47 +692,7 @@ var illustrations = {
             
             return {'direction': topStations, 'description': description};
         }       
-    },	
-
-	'distance-all': {
-	    group: 'distance',
-	    unit: 'meters',
-	    unitRounding: 0,
-	    useRawMarkerSize: true,
-	    markerOptions: markerOptions.distance,
-	    clusteringEnabled: false,	    
-  	    draw: function() {
-	        removeMarkers();
-    	    showStations();
-	        showStationStatistic('distance-all', ['min', 'mean', 'max']);
-        },
-        
-  	    queryResults: function() { 
-            
-            updateCache(['startYear', 'startMonth', 'startWeekday', 'startHour', 'stationStart', 'member', 'gender']);
-
-            var min = DataSource.query(cachedDataSource, "stationStart", "distance", "min");
-            var mean = DataSource.query(cachedDataSource, "stationStart", "distance", "mean");
-            var max = DataSource.query(cachedDataSource, "stationStart", "distance", "max");
-            
-            var description = '<div class="results_title">Min/Mean/Max Distance Traveled</div>';
-            Object.keys(selectedFilters['stationStart']).forEach(function(station) {
-                if (min[station] === undefined) { 
-                    description += '<div class="results_group">' + 
-                            Hubway.stations[station]['name'] + ": no rides during this period</div>";
-                            
-                } else {
-                    description += '<div class="results_group">' + 
-                            Hubway.stations[station]['name'] + ": " + 
-                            Math.round(min[station], 0) + "/" + 
-                            Math.round(mean[station], 0) + "/" + 
-                            Math.round(max[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
-                }
-            });
-                        
-            return {'min': min, 'mean': mean, 'max': max, 'description': description};
-        }	
-	},
+    },
 
 	'distance-min': {
 	    group: 'distance',	
@@ -758,7 +722,7 @@ var illustrations = {
                 } else {
                     description += '<div class="results_group">' + 
                             Hubway.stations[station]['name'] + ": " + 
-                            Math.round(min[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+                            Math.round(min[station], 0) + " " + illustrations['distance-min']['unit'] + '</div>';
                 }
             });
             
@@ -794,7 +758,7 @@ var illustrations = {
                 } else {
                     description += '<div class="results_group">' + 
                             Hubway.stations[station]['name'] + ": " + 
-                            Math.round(mean[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+                            Math.round(mean[station], 0) + " " + illustrations['distance-mean']['unit'] + '</div>';
                 }
             });
                 
@@ -830,15 +794,11 @@ var illustrations = {
                 } else {
                     description += '<div class="results_group">' + 
                             Hubway.stations[station]['name'] + ": " + 
-                            Math.round(max[station], 0) + " " + illustrations['distance-all']['unit'] + '</div>';
+                            Math.round(max[station], 0) + " " + illustrations['distance-max']['unit'] + '</div>';
                 }
             });
-            
-            var kMeansResults = getClusters(max, kMeansNumberOfClusters);
-            
-            return {'max': max, 'description': description,
-                    'clusters': kMeansResults['clusters'], 'clusterMeans': kMeansResults['means']};
-            
+                        
+            return {'max': max, 'description': description};
         }	
 	}
 };
@@ -1365,7 +1325,6 @@ function addToMap(new_map) {
 	// redraw points after zoom
 	map.on('zoomend', function() {
 	    var bounds = map.getBounds();
-	    // console.log("[[%s, %s], [%s, %s]]", bounds._southWest.lat, bounds._southWest.lng, bounds._northEast.lat, bounds._northEast.lng);
 	    redraw();
 	});
 
@@ -1460,7 +1419,10 @@ function addToMap(new_map) {
 	    }
 	    
 	    var name = illustrations[query]['buttonName'] ? illustrations[query]['buttonName'] : query;
-	    var button = '<button class="btn btn-default btn-sm js_query" id="js_' + query + '">' + name + '</button>';
+	    
+	    var tooltip = illustrations[query]['tooltip'] ? 'title="' + illustrations[query]['tooltip'] + '"': '';
+	    var button = '<button class="btn btn-default btn-sm js_query" id="js_' + query + '" ' + tooltip + ' >' + name + '</button>';
+	    
 	    $("#js_queries").append(button);
 
 
@@ -1470,13 +1432,17 @@ function addToMap(new_map) {
 	});
 	
 	$("#js_markerSize_minus").on("click", function() {
-    	markerZoom /= 2;
-    	redraw();
+    	if (activeStatistic && !illustrations[activeStatistic]['useRawMarkerSize']) {
+    	    markerZoom /= 2;
+    	    redraw();
+    	}
 	});
 
 	$("#js_markerSize_plus").on("click", function() {
-    	markerZoom *= 2;
-    	redraw();
+    	if (activeStatistic && !illustrations[activeStatistic]['useRawMarkerSize']) {
+        	markerZoom *= 2;
+        	redraw();
+        }
 	});
 	
     // lay out filters
