@@ -720,15 +720,23 @@
 		showOverlayError: function(message, tm) {
 			var msg = $('<div class="overlay-warning"></div>').text(message).appendTo("body");
 			msg.fadeIn(200, function() {
+				var tmout, close = function() {
+					msg.fadeOut(400, function() {
+						msg.remove();
+					})
+				};
+
+				msg.on("click", function() {
+					// clear timeout
+					tmout && clearTimeout(tmout);
+					close();
+				});
+
 				if (false === tm) {
 					return;
 				}
 
-				setTimeout(function() {
-					msg.fadeOut(400, function() {
-						msg.remove();
-					})
-				}, tm || 8000);
+				tmout = setTimeout(close, tm || 8000);
 			});
 		}
 	};
