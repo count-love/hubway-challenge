@@ -378,7 +378,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: ' trips/day',
 	    unitRounding: 0,
-	    markerScale: 50,
+	    markerScale: 10,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,
@@ -414,7 +414,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: 'trips/day',
 	    unitRounding: 0,
-	    markerScale: 50,
+	    markerScale: 10,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,	    
@@ -490,7 +490,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: 'trips/dock-hour',
 	    unitRounding: 3,
-	    markerScale: 0.001,
+	    markerScale: 0.0002,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,	    
@@ -985,10 +985,10 @@ function showStations() {
         var row = Hubway.stations[id];
         
         var description = '['+ id + '] ' + row.name + ', ' + row['docks'] + ' bikes';        
-        marker = addMarker(row.latitude, row.longitude, description, "default", 10 * defaultMarkerRadius, markerOptions.default);
+        var marker = addMarker(row.latitude, row.longitude, description, "default", 10 * defaultMarkerRadius, markerOptions.default);
         marker.setStyle(markerOptions.stationUnselected);
 
-        marker.bindPopup(description);
+        marker.bindPopup(description, {autoPan: false});
         marker.on('mouseover', function (e) { this.openPopup(); });
         marker.on('mouseout', function (e) { this.closePopup(); });
 
@@ -1184,7 +1184,7 @@ function showStationStatistic(forStatistic, properties) {
                     station.latitude, station.longitude, description, 
                     cluster, markerSize, illustrations[forStatistic].markerOptions); 
     
-                marker.bindPopup(description);
+                marker.bindPopup(description, {autoPan: false});
                 marker.on('mouseover', function (e) { this.openPopup(); });
                 marker.on('mouseout', function (e) { this.closePopup(); });
            });
@@ -1339,7 +1339,8 @@ function addToMap(new_map) {
 
 	// redraw points after zoom
 	map.on('zoomend', function() {
-	    console.log(map.getBounds());
+	    var bounds = map.getBounds();
+	    console.log("[[%s, %s], [%s, %s]]", bounds._southWest.lat, bounds._southWest.lng, bounds._northEast.lat, bounds._northEast.lng);
 	    redraw();
 	});
 

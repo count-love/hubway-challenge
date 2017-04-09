@@ -5,7 +5,7 @@
 	};
 
 	var $story, $container, $explore;
-	var panes = [], active = -1;
+	var panes = [], pane_index = {}, active = -1;
 	var map;
 
 	// v
@@ -252,6 +252,14 @@
 			distance += scroll_offset_last;
 		}
 
+		// limit scrolling to one pane
+		if (distance < (0 - pane_height)) {
+			distance = 0 - pane_height;
+		}
+		else if (distance > pane_height) {
+			distance = pane_height;
+		}
+
 		// new top
 		var top = pane_height * (0 - active) + distance;
 
@@ -385,10 +393,7 @@
 	var root = this;
 	var Story = {
 		mapDefaultView: function() {
-			map.fitBounds([
-				[42.33811807427539, -71.13733291625978],
-				[42.376934182549896, -71.00309371948244]
-			]);
+			map.fitBounds([[42.3378642953564, -71.15844726562501],[42.39455841668649,-71.01081848144533]]);
 		},
 		setupPage: function(el, params) {
 			// merge default parameters
@@ -448,6 +453,11 @@
 				return pane;
 			});
 
+			// make panes index
+			panes.forEach(function(pane) {
+				pane_index[pane.name] = pane;
+			});
+
 			// append indicators
 			indicators.appendTo($story).on("click", "li", function() {
 				var index = $(this).index();
@@ -481,6 +491,7 @@
 				}
 			});
 			$story.on("click", "[data-story-alt]", onClickAlternate);
+			$story.on("click", "[data-story-mode]", onClickMode);
 		},
 		setupTabs: function(el) {
 			$(el).on("click", "[data-story-mode]", onClickMode);
@@ -542,10 +553,8 @@
 
 			// string
 			if ("string" === typeof index_or_name) {
-				for (var i = 0; i < panes.length; ++i) {
-					if (index_or_name === panes[i].name) {
-						return panes[i];
-					}
+				if (index_or_name in pane_index) {
+					return pane_index[index_or_name];
 				}
 			}
 
@@ -569,7 +578,7 @@
 		configureExploreLayer: function(config) {
 			if (false === config) {
 				// close in explore
-				$("#tool-explore").removeClass("in");
+				$("#tool-explore").removeClass("in").css("height", "0px");
 
 				// if installed? send clear message
 				if (installed_explore) {
@@ -579,7 +588,7 @@
 			}
 
 			// close in explore
-			$("#tool-explore").addClass("in");
+			$("#tool-explore").addClass("in").css("height", "auto");
 
 			// install
 			$.when(this.installExploreLayer()).done(function() {
@@ -655,7 +664,7 @@
 		configureTransitLayer: function(config) {
 			if (false === config) {
 				// close in explore
-				$("#tool-transit").removeClass("in");
+				$("#tool-transit").removeClass("in").css("height", "0px");
 
 				// if installed? clear layer
 				if (layer_transit) {
@@ -665,7 +674,7 @@
 			}
 
 			// open in explore
-			$("#tool-transit").addClass("in");
+			$("#tool-transit").addClass("in").css("height", "auto");
 
 			// install
 			$.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
