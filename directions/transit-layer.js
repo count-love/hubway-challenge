@@ -7,7 +7,7 @@
 		onAdd: function(map) {
 			this._last = "off";
 
-			return L.DomUtil.create('div', 'transit-scale');
+			return L.DomUtil.create('div', 'transit-legend');
 		},
 		onRemove: function(map) {
 			// nothing to do
@@ -18,17 +18,26 @@
 			// empty
 			this._container.innerHTML = '';
 			this._last = "off"; // saves a little bit by preventing redraw
-
 		},
-		redrawScale: function(d3_scale) {
+		redrawScale: function(seconds, colors) {
 			if ("scale" === this._last) { return; }
+
+			// make (potentially replace with nice d3 based approach)
+			var html = '<h6>Travel Time</h6><svg width="240" height="20" version="1.1"><defs><linearGradient id="scale-gradient" x1="0" x2="1" y1="0" y2="0">';
+			var maxi = Math.min(seconds.length, colors.length);
+			for (var i = 0; i < maxi; ++i) {
+				html += '<stop offset="' + Math.round(100 * (i / (maxi - 1))) + '%" stop-color="' + colors[i] + '"></stop>';
+			}
+			html += '</linearGradient></defs><rect x="0" y="0" width="240" height="20" fill="url(#scale-gradient)"></rect></svg>';
+			html += '<div class="scale-extrema"><span class="low">' + (seconds[0] / 60) + ' min</span><span class="high">' + (seconds[maxi - 1] / 60) + ' min</span></div>'
+			this._container.innerHTML = html;
 
 			this._last = "scale"; // saves a little bit by preventing redraw
 		},
 		redrawKey: function(names, colors) {
 			if ("key" === this._last) { return; }
 
-			var html = '';
+			var html = '<h6>Best Mode of Transit</h6>';
 			for (var i = 0, maxi = Math.min(names.length, colors.length); i < maxi; ++i) {
 				html += '<div class="entry"><span class="swatch" style="background-color:' + colors[i] + ';"></span> ' + names[i] + '</div>';
 			}
@@ -367,7 +376,7 @@
 			switch (this._mode) {
 				case L.TransitLayer.MODE_TIME:
 					this._drawTime();
-					this._legend && this._legend.redrawScale(this._d3Scale());
+					this._legend && this._legend.redrawScale(this.options.timeScaleDomain, this.options.timeScaleRange);
 					break;
 
 				case L.TransitLayer.MODE_MODE:

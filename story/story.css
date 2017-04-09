@@ -192,19 +192,13 @@ form > div {
 }
 
 /* transit layer */
-.transit-scale {
-    /*width: 250px;
-    height: 70px;*/
+.transit-legend {
     background-color: #eee;
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
     padding: 2px 8px;
-    /*border-radius: 4px;*/
 }
 
-.transit-scale .entry {
-}
-
-.transit-scale .swatch {
+.transit-legend .swatch {
     height: 12px;
     width: 12px;
     display: inline-block;
@@ -212,4 +206,27 @@ form > div {
     margin-right: 5px;
 }
 
+.transit-legend h6 {
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 4px 0 0 0;
+    font-weight: bold;
+}
+
+.transit-legend svg {
+    margin-top: 1px;
+}
+
+.transit-legend .scale-extrema {
+    font-size: 12px;
+    line-height: 14px;
+    height: 12px;
+    margin-bottom: 6px;
+}
+.transit-legend .low {
+    float: left;
+}
+.transit-legend .high {
+    float: right;
+}
 
