@@ -8,8 +8,8 @@
 	var panes = [], pane_index = {}, active = -1;
 	var map;
 
-	// v
-	var is_exploring = false;
+	// blocking modes
+	var is_redrawing = false, is_exploring = false;
 
 	// UI math and variables
 	var pane_height;
@@ -132,7 +132,7 @@
 			pos.lineHeight = pos.height + "px"; // same line height
 
 			// configure overlay
-			var el = $('<div class="loading-overlay">Loading...</div>').insertAfter($obj).css(pos);
+			var el = $('<div class="loading-overlay">Loading...</div>')[$obj.is("body") ? "appendTo" : "insertAfter"]($obj).css(pos);
 
 			// add element
 			ret = ret.add(el);
@@ -163,6 +163,7 @@
 			// start exploration
 			if (layer_transit) {
 				layer_transit.options.listenClick = true;
+				Story.showOverlay("Click the map to set a new start location.", "info");
 			}
 		}
 		else {
@@ -233,7 +234,7 @@
 
 	function onMouseWheel(ev) {
 		// is exploring? disable mouse wheel
-		if (is_exploring) { return; }
+		if (is_exploring || is_redrawing) { return; }
 
 		// only vertical scroll
 		if (0 === ev.deltaY) { return; }
@@ -513,7 +514,7 @@
 
 			// resize panes
 			for (var i = 0; i < panes.length; ++i) {
-				panes[i].$el.height(pane_height);
+				panes[i].$el.css("height", pane_height);
 			}
 
 			// adjust active
@@ -584,14 +585,15 @@
 				if (installed_explore) {
 					ExploreTool.clearMap();
 				}
-				return;
+
+				return true;
 			}
 
 			// close in explore
 			$("#tool-explore").addClass("in").css("height", "auto");
 
 			// install
-			$.when(this.installExploreLayer()).done(function() {
+			return $.when(this.installExploreLayer()).done(function() {
 				if (config.stations) {
 					if ("all" === config.stations) {
 						ExploreTool.setAllStations(false);
@@ -670,14 +672,14 @@
 				if (layer_transit) {
 					layer_transit.clearOverlay();
 				}
-				return;
+				return true;
 			}
 
 			// open in explore
 			$("#tool-transit").addClass("in").css("height", "auto");
 
 			// install
-			$.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
+			return $.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
 				// set mode (do not redraw)
 				layer_transit.setMode(config.mode || "mode", false);
 
@@ -712,9 +714,20 @@
 			});
 		},
 		configureMap: function(config) {
+			// set is redrawing
+			is_redrawing = true;
+			var loading = _createLoadingOverlay(map.getContainer());
+
 			// configure exploration layers
-			this.configureExploreLayer(config.toolExplore || false);
-			this.configureTransitLayer(config.toolTransit || false);
+			setTimeout(function() {
+				$.when(
+					Story.configureExploreLayer(config.toolExplore || false),
+					Story.configureTransitLayer(config.toolTransit || false)
+				).always(function() {
+					loading.remove();
+					is_redrawing = false;
+				});
+			}, 0);
 
 			// move map view
 			if (config.view) {

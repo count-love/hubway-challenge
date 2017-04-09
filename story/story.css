@@ -200,6 +200,23 @@ form > div {
     /* TODO: write me */
 }
 
+/* filters */
+.filter {
+    margin-bottom: 20px;
+}
+
+.filter-slider {
+    margin-top: 0.214285715em;
+}
+
+.filter-text-label {
+    margin-top: 0.4em;
+}
+
+.filter-text {
+    width: 100%;
+}
+
 /* transit layer */
 .transit-legend {
     background-color: #eee;

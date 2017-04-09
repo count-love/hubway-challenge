@@ -910,7 +910,7 @@ function printTopStations(resultsByStation, sortByDescending, max, printCounts, 
 function setupFilters(defaults) {
 
     Object.keys(queryFilters).forEach(function(group) {
-        var newFilter = '<div class="filter"><div id="js_' + group + '"></div></div>';
+        var newFilter = '<div class="filter"><div id="js_' + group + '" class="btn-group"></div></div>';
         $("#js_filters").append(newFilter);
     });
 
@@ -931,7 +931,7 @@ function setupFilters(defaults) {
     
         // add buttons to the DOM
         $("#js_"+group).html(filters);
-        $(".btn").tooltip();
+	    $(".btn").tooltip({container: "#js_filters"});
     
         // attach event handlers
         queryFilters[group].forEach(function(button) {
