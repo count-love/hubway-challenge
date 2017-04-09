@@ -55,7 +55,6 @@ jQuery(function($) {
 		}
 	});
 	
-
 	Story.getPane("under-util-dana-park").configure({
 		map: {
 			view: "default",
@@ -159,9 +158,65 @@ jQuery(function($) {
 				mode: "time"
 			}
 		}
+	}).addAlternate("backBay", {
+		map: {
+			toolTransit: {
+				start: 2902
+			}
+		}
+	}).addAlternate("fenway", {
+		map: {
+			toolTransit: {
+				start: 2285
+			}
+		}
+	}).addAlternate("chelseaToBoston", {
+		map: {
+			toolTransit: {
+				start: 9604
+			}
+		}
+	}).addAlternate("charlestownToBoston", {
+		map: {
+			toolTransit: {
+				start: 7203
+			}
+		}
+	}).addAlternate("westSomervilleToBoston", {
+		map: {
+			toolTransit: {
+				start: 9884
+			}
+		}
+	}).addAlternate("memberPace", {
+		map: {
+		    view: [[42.29724647750399, -71.176815032959], [42.41927472203913, -70.96429824829103]],
+			toolExplore: {
+			    filter: {
+			        member: "member"
+			    },
+				statistic: "duration"
+			}
+		}
+	}).addAlternate("casualPace", {
+		map: {
+		    view: [[42.29724647750399, -71.176815032959], [42.41927472203913, -70.96429824829103]],
+			toolExplore: {
+			    filter: {
+			        member: "casual"
+			    },
+				statistic: "duration"
+			}
+		}
 	});
 	
 	Story.getPane("tidbits-city-popular").configure({
+	    map: {
+	        toolExplore: {
+                statistic: "distance-min"
+	        }
+	    }
+    }).addAlternate("mit", {
 		map: {
 			toolExplore: {
 				stationGroup: "MIT",
@@ -174,11 +229,114 @@ jQuery(function($) {
 				filter: {
 					member: "member"
 				},
-				stations: [182, 183, 185, 181],
+				stationGroup: "Tufts",
 				statistic: "popular-routes"
 			}
 		}
-	});	
+	}).addAlternate("cambridge", {
+	    map: {
+			toolExplore: {
+				stationGroup: "Cambridge",
+				statistic: "popular-routes"
+			}	    
+	    }
+	}).addAlternate("fortPoint", {
+	    map: {
+			toolExplore: {
+				stationGroup: "Fort Point",
+				statistic: "popular-routes"
+			}	    
+	    }	
+	}).addAlternate("touristStops", {
+	    map: {
+		    view: [[42.3310753291462, -71.11879348754884], [42.39208625055673, -71.05321884155275]],
+			toolExplore: {
+			    filter: {
+			        member: "casual"
+			    },
+				statistic: "stops",
+				clusters: 3
+			}
+	    }	
+	}).addAlternate("touristPopular", {
+	    map: {
+		    view: [[42.29724647750399, -71.176815032959], [42.41927472203913, -70.96429824829103]],
+			toolExplore: {
+			    filter: {
+			        member: "casual"
+			    },
+				statistic: "popular-routes",
+			}
+	    }	
+	}).addAlternate("memberPopular", {
+	    map: {
+		    view: [[42.29724647750399, -71.176815032959], [42.41927472203913, -70.96429824829103]],
+			toolExplore: {
+			    filter: {
+			        member: "member"
+			    },
+				statistic: "popular-routes",
+			}
+	    }	
+	});
+	
+	Story.getPane("tidbits-work-life").configure({
+	    map: {
+	        toolExplore: {
+	            filter: {
+	                day: "morning"
+	            },
+                statistic: "stops"
+	        }
+	    }
+    }).addAlternate("evening", {
+		map: {
+			toolExplore: {
+			    filter: {
+			        day: "evening",
+			    },
+				statistic: "stops"
+			}
+		}
+    }).addAlternate("menAll", {
+		map: {
+			toolExplore: {
+			    filter: {
+			        gender: "male"
+			    },
+				statistic: "starts"
+			}
+		}
+    }).addAlternate("womenAll", {
+		map: {
+			toolExplore: {
+			    filter: {
+			        gender: "female"
+			    },
+				statistic: "starts"
+			}
+		}
+	}).addAlternate("menMorning", {
+		map: {
+			toolExplore: {
+			    filter: {
+			        gender: "male",
+			        day: "morning",
+			    },
+				statistic: "starts"
+			}
+		}
+    }).addAlternate("womenMorning", {
+		map: {
+			toolExplore: {
+			    filter: {
+			        gender: "female",
+			        day: "morning"
+			    },
+				statistic: "starts"
+			}
+		}
+	});
 	
 	/*
 	Story.getPane("two").configure({

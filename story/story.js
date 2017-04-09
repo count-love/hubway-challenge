@@ -393,7 +393,7 @@
 	var root = this;
 	var Story = {
 		mapDefaultView: function() {
-			map.fitBounds([[42.3378642953564, -71.15844726562501],[42.39455841668649,-71.01081848144533]]);
+			map.fitBounds([[42.29724647750399, -71.176815032959], [42.41927472203913, -70.96429824829103]]);
 		},
 		setupPage: function(el, params) {
 			// merge default parameters
