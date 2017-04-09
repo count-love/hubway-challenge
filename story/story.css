@@ -252,7 +252,7 @@ form > div {
     .story-container {
         position: absolute;
         top: 0;
-        left: 30px;
+        left: 40px;
     }
 
     .story-indicators li {
@@ -262,7 +262,7 @@ form > div {
         text-indent: -999px;
         cursor: pointer;
         background-color: transparent;
-        border: 1px solid black;
+        border: 1px solid white;
         border-radius: 10px;
     }
 
@@ -270,7 +270,7 @@ form > div {
         width: 15px;
         height: 15px;
         margin: 10px 0;
-        background-color: black;
+        background-color: white;
     }
 
     header .logo {
