@@ -308,6 +308,9 @@
 				if (installed_explore) {
 					// show stations... TODO: might do weird things if something already drawn?
 					ExploreTool.showStations();
+
+					// prepare subsequent data
+					ExploreTool.prepareDataSource();
 				}
 				else {
 					loading = _createLoadingOverlay(map.getContainer());
@@ -315,6 +318,9 @@
 						.done(function() {
 							// remove loading
 							loading.remove();
+
+							// prepare subsequent data
+							ExploreTool.prepareDataSource();
 						});
 				}
 				break;
@@ -350,7 +356,10 @@
 	var root = this;
 	var Story = {
 		mapDefaultView: function() {
-			map.fitBounds([[42.29724647750399, -71.176815032959], [42.41927472203913, -70.96429824829103]]);
+			map.fitBounds([
+				[42.40292502563794,-71.14411354064943],
+				[42.329235202730786,-71.02017402648927]
+			]);
 		},
 		setupPage: function(el, params) {
 			// merge default parameters
@@ -360,6 +369,12 @@
 			map = L.map('map', {
 				scrollWheelZoom: false
 			});
+
+			/*
+			map.on("click", function(a) {
+				console.log(JSON.stringify([a.latlng.lat, a.latlng. lng]));
+			});
+			*/
 
 			// Statmen layer - Toner or Terrain
 			//L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png', {
@@ -586,6 +601,9 @@
 				// set marker size
 				ExploreTool.setMarkerSize(config.markerSize || 10, false);
 
+				// set active station
+				ExploreTool.setActiveStation(config.highlightStation || 0, false);
+
 				// set filters
 				var filter_arr, filter_hash = $.extend({
 					day: "all",
@@ -603,7 +621,12 @@
 				ExploreTool.setFilters(filter_arr, false);
 
 				// set statistic
-				ExploreTool.setActiveStatistic(config.statistic || "starts", true);
+				if (config.statistic) {
+					ExploreTool.setActiveStatistic(config.statistic, true);
+				}
+				else {
+					ExploreTool.showStations();
+				}
 			});
 		},
 		installTransitLayer: function(source) {
@@ -718,7 +741,7 @@
 			}
 		},
 		showOverlay: function(message, message_class, tm) {
-			var msg = $('<div class="overlay"></div>').addClass("overlay-" + (message_class || "warning")).text(message).appendTo("body");
+			var msg = $('<div class="overlay"></div>').addClass("overlay-" + (message_class || "warning")).text(message).appendTo("#map");
 			msg.fadeIn(200, function() {
 				var tmout, close = function() {
 					msg.fadeOut(400, function() {

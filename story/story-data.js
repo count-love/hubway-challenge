@@ -4,6 +4,13 @@ jQuery(function($) {
 	Story.setupController("#sidebar-info");
 	Story.setupExploreTool("#sidebar-tools");
 
+	Story.getPane("intro").configure({
+		map: {
+			view: "default",
+			toolExplore: {} // shows stations
+		}
+	});
+
 	// [2016, all times, all stations, starts, 7-clustering]
 	Story.getPane("under-util-1").configure({
 		map: {

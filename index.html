@@ -375,7 +375,41 @@
         <a href="#" data-story-mode="explore" class="btn btn-warning btn-lg btn-block">Explore The Data</a>
     </div>
     <div class="details">
-        <a href="#">About</a> &bullet; By <a href="https://www.tommyleung.com/">Tommy</a> &amp; <a href="https://www.nathanntg.com/">Nathan</a>.
+        <a href="#" data-toggle="modal" data-target="#about-modal">About</a> &bullet;
+        By <a href="https://www.tommyleung.com/">Tommy</a> &amp; <a href="https://www.nathanntg.com/">Nathan</a>.
+    </div>
+</div>
+<div class="modal fade" id="about-modal" tabindex="-1" role="dialog" aria-labelledby="about-modal-label">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="about-modal-label">About</h4>
+            </div>
+            <div class="modal-body">
+                <p>This page was created by <a href="https://www.tommyleung.com/" target="_blank">Tommy Leung</a> and
+                    <a href="https://www.nathanntg.com/" target="_blank">Nathan Perkins</a> as a submission
+                    to the <a href="https://www.thehubway.com/datachallenge" target="_blank">Hubway Data Challenge</a>.
+                </p>
+                <p><strong>Data cleaning.</strong> The Hubway data format has evolved over time, as have the stations.
+                    We standardized station identifiers, tracked down some missing stations, normalized member and
+                    gender fields and standardized the units for trip duration.</p>
+                <p><strong>Additional data.</strong> In addition to the Hubway trip information, we used data from the
+                    <a href="http://mbta.com/" target="_blank">MBTA</a> for transit information, as well as map data from
+                    <a href="https://mapzen.com" target="_blank">Mapzen</a> to identify land and water boundaries.</p>
+                <p><strong>Preprocessing.</strong> In order to provide a web interface to explore the over five million
+                    Hubway trips, we built a custom binary format. Through differential, variable length encoding, all
+                    trip data can be represented in approximately 10MB. We also processed the MBTA schedule information
+                    to identify time between stations and bus stops, as well as trip frequency.</p>
+                <p><strong>Acknowledgements.</strong> This project has benefited from a number of libraries, open source
+                    resources and guides. Thanks to <a href="http://leafletjs.com" target="_blank">Leaflet</a> for a
+                    powerful and customizable mapping engine, <a href="https://carto.com" target="_blank">CARTO</a> for
+                    beautiful map tiles, <a href="https://d3js.org/" target="_blank">D3</a> for drawing tools, and
+                    <a href="http://jdataview.github.io/jDataView/" target="_blank">jDataView</a> &amp;
+                    <a href="http://jdataview.github.io/jBinary/" target="_blank">jBinary</a> for simplifying access to
+                    binary data in JavaScript.</p>
+            </div>
+        </div>
     </div>
 </div>
 </body>

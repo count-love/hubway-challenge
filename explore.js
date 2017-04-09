@@ -8,6 +8,7 @@ var map;
 var Hubway = {};
 var activeMarkers = {};
 var activeStatistic;
+var activeStation; // highlight a station
 var clusters = {};
 var cachedDataSource;
 var cacheKey = '';
@@ -987,7 +988,7 @@ function showStations() {
         var row = Hubway.stations[id];
         
         var description = '['+ id + '] ' + row.name + ', ' + row['docks'] + ' bikes';        
-        var marker = addMarker(row.latitude, row.longitude, description, "default", 10 * defaultMarkerRadius, markerOptions.default);
+        var marker = addMarker(row.latitude, row.longitude, description, "default", 10 * defaultMarkerRadius, markerOptions.default, activeStation === +id);
         marker.setStyle(markerOptions.stationUnselected);
 
         marker.bindPopup(description, {autoPan: false});
@@ -1086,6 +1087,21 @@ function showStationStatistic(forStatistic, properties) {
         means = queryResults['clusterMeansOriginalArray'];
 
     } else {
+        // check loading
+        if (!DataSource.isLoaded()) {
+            var loading = createLoadingOverlay(map.getContainer());
+            loading.text("Downloading 5,000,000 trips...");
+            DataSource.loadData("data/trips.bin", "data/stations.json")
+                .done(function() {
+                    showStationStatistic(forStatistic, properties);
+                })
+                .fail(function() {
+                    // really ungraceful
+                    window.Story && window.Story.showOverlay("Unable to load ride information. Please try refreshing.");
+                })
+                .always(function() { loading.remove(); });
+            return;
+        }
     
         queryResults = illustrations[forStatistic].queryResults();
 
@@ -1186,7 +1202,8 @@ function showStationStatistic(forStatistic, properties) {
 
                 var marker = addMarker(
                     station.latitude, station.longitude, description, 
-                    cluster, markerSize, illustrations[forStatistic].markerOptions); 
+                    cluster, markerSize, illustrations[forStatistic].markerOptions,
+                    activeStation === +id); 
     
                 marker.bindPopup(description, {autoPan: false});
                 marker.on('mouseover', function (e) { this.openPopup(); });
@@ -1205,7 +1222,7 @@ function defineCluster(kMeansLabel) {
     }
 }
 
-function addMarker(latitude, longitude, description, kMeansLabel, radius, options) {
+function addMarker(latitude, longitude, description, kMeansLabel, radius, options, is_active) {
    
     defineCluster(kMeansLabel);
     
@@ -1218,6 +1235,9 @@ function addMarker(latitude, longitude, description, kMeansLabel, radius, option
     
     if (options.pane) {
         markerOptions['pane'] = options.pane;
+    }
+    if (is_active) {
+    	markerOptions['className'] = 'station-active';
     }
 
     // add the marker to the map and save a reference    
@@ -1303,7 +1323,7 @@ function redraw() {
     if (activeStatistic) {
 
      	var loading = createLoadingOverlay(map.getContainer());
-        setTimeout(function() { illustrations[activeStatistic].draw(); loading.remove(); })
+        setTimeout(function() { illustrations[activeStatistic].draw(); loading.remove(); }, 0);
     }
 }
 
@@ -1318,7 +1338,8 @@ function setActiveStatistic(statistic, should_redraw) {
 
 function resetMap() {
 	removeMarkers();
-	activeStatistic = undefined;
+	activeStatistic = null;
+	activeStation = null;
 	selectedFilters['stationStart'] = {'-1': true};
 	showStations();
 	$(".js_query").removeClass("active");
@@ -1349,7 +1370,7 @@ function addToMap(new_map) {
 	});
 
     // load data source
-	var ret = DataSource.loadData("data/trips.bin", "data/stations.json")
+	var ret = DataSource.loadStations("data/stations.json")
 		.done(function() {
 		
 			// LOADED, READY TO GO
@@ -1577,10 +1598,18 @@ root.ExploreTool = {
 		    redraw();
 	    }
     },
+    setActiveStation: function(station_id, should_redraw) {
+	    activeStation = station_id;
+
+	    if ("undefined" === typeof should_redraw || false !== should_redraw) {
+		    redraw();
+	    }
+    },
     showStations: showStations,
     resetMap: resetMap,
     clearMap: function() {
         activeStatistic = null;
+        activeStation = null;
         removeMarkers();
     }
 };

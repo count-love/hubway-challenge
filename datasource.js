@@ -17,7 +17,7 @@
 	}
 
 	// public functions
-	root.DataSource = {
+	var DataSource = {
 		// [duration, gender, member, minute, year, month, weekday, hour, end station, start station].
 		FIELDS: {
 			stationStart: function(v) { return v & 0xff; },
@@ -87,6 +87,45 @@
 		isLoaded: function() {
 			return true === load_status;
 		},
+		loadStations: function(src_stations) {
+			// already loaded
+			if (true === load_status) {
+				return $.Deferred().resolveWith(this).promise();
+			}
+
+			var dfd_stations = new $.Deferred(), that = this;
+
+			$.ajax({
+				dataType: "json",
+				url: src_stations
+			}).done(function (data) {
+				// notify progress
+				dfd_stations.notifyWith(that, ["downloaded-stations"]);
+
+				// confirm that it is indeed an array
+				if ($.isArray(data)) {
+					// store stations
+					if (!stations) {
+						stations = data;
+					}
+
+					// not really needed, but consistent with binary
+					dfd_stations.notifyWith(that, ["parsed-stations"]);
+
+					// mark as resolved
+					dfd_stations.resolveWith(that);
+				}
+				else {
+					// reject
+					dfd_stations.rejectWith(that, ["Expected array of stations."]);
+				}
+			}).fail(function (jqXHR, text, err) {
+				// reject
+				dfd_stations.rejectWith(that, [err, text]);
+			});
+
+			return dfd_stations.promise();
+		},
 		loadData: function(src_trips, src_stations) {
 			// already loaded
 			if (true === load_status) {
@@ -99,7 +138,7 @@
 			}
 
 			// make a promise
-			var dfd_trips = new $.Deferred(), dfd_stations = new $.Deferred(), that = this;
+			var dfd_trips = new $.Deferred(), dfd_stations, that = this;
 			
 			jBinary.loadData(src_trips, function(err, data) {
 				// ran into an error?
@@ -130,33 +169,15 @@
 				load_status = true;
 				dfd_trips.resolveWith(that);
 			});
-			
-			$.ajax({
-				dataType: "json",
-				url: src_stations
-			}).done(function(data) {
-				// notify progress
-				dfd_stations.notifyWith(that, ["downloaded-stations"]);
-				
-				// confirm that it is indeed an array
-				if ($.isArray(data)) {
-					// store stations
-					stations = data;
-					
-					// not really needed, but consistent with binary
-					dfd_stations.notifyWith(that, ["parsed-stations"]);
-					
-					// mark as resolved
-					dfd_stations.resolveWith(that);
-				}
-				else {
-					// reject
-					dfd_stations.rejectWith(that, ["Expected array of stations."]);
-				}
-			}).fail(function(jqXHR, text, err) {
-				// reject
-				dfd_stations.rejectWith(that, [err, text]);
-			});
+
+			// stations can be loaded separately
+			if (stations) {
+				dfd_stations = new $.Deferred();
+				dfd_stations.resolveWith(that);
+			}
+			else {
+				dfd_stations = this.loadStations(src_stations);
+			}
 
 			// store pending load status to avoid duplicate loads
 			return (load_status = $.when(dfd_trips, dfd_stations));
@@ -300,6 +321,8 @@
 			return ret;
 		}
 	};
+
+	root.DataSource = DataSource;
 	
 	// private functions
 	function _parseFromDataView(bin) {
@@ -403,7 +426,7 @@
 		if (!(name in root.DataSource.FIELDS)) {
 			throw "Unrecognized column for filtering: " + name;
 		}
-		var cb = root.DataSource.FIELDS[name];
+		var cb = DataSource.FIELDS[name];
 		
 		// allow direct callbacks
 		if ("function" === typeof filter) {
@@ -435,8 +458,8 @@
 				return grouper;
 			
 			case "string":
-				if (grouper in root.DataSource.FIELDS) {
-					return root.DataSource.FIELDS[grouper];
+				if (grouper in DataSource.FIELDS) {
+					return DataSource.FIELDS[grouper];
 				}
 				throw "Unrecognized column for grouping: " + grouper;
 			
@@ -451,16 +474,16 @@
 				return value;
 			
 			case "string":
-				if (value in root.DataSource.FIELDS) {
-					return root.DataSource.FIELDS[value];
+				if (value in DataSource.FIELDS) {
+					return DataSource.FIELDS[value];
 				}
 				
-				if (value in root.DataSource.COMPUTED) {
-					if (root.DataSource.COMPUTED[value].initialize) {
-						root.DataSource.COMPUTED[value].initialize();
+				if (value in DataSource.COMPUTED) {
+					if (DataSource.COMPUTED[value].initialize) {
+						DataSource.COMPUTED[value].initialize();
 					}
 					
-					return root.DataSource.COMPUTED[value].compute;
+					return DataSource.COMPUTED[value].compute;
 				}
 				
 				throw "Unrecognized column for value: " + value;
@@ -483,8 +506,8 @@
 				return {ingest: aggregator};
 			
 			case "string":
-				if (aggregator in root.DataSource.AGGREGATORS) {
-					return root.DataSource.AGGREGATORS[aggregator];
+				if (aggregator in DataSource.AGGREGATORS) {
+					return DataSource.AGGREGATORS[aggregator];
 				}
 				throw "Unrecognized column for aggregator: " + aggregator;
 				
