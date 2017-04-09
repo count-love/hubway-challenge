@@ -51,7 +51,8 @@ jQuery(function($) {
 			view: [[42.36009778602673, -71.11192703247072], [42.37427109825652, -71.0750198364258]],
 			toolExplore: {
 				statistic: "utilization",
-				clusters: 7
+				clusters: 7,
+				highlightStation: 157
 			}
 		}
 	}).addAlternate("brookline", {
@@ -71,7 +72,7 @@ jQuery(function($) {
 			toolTransit: {
 				source: "data/directions-s.json",
 				start: 4181,
-				resize: false,
+				resize: false
 			}
 		}
 	}).addAlternate("danaParkUtilization", {
@@ -223,6 +224,7 @@ jQuery(function($) {
 	
 	Story.getPane("funFacts-city-popular").configure({
 	    map: {
+	    	view: "default",
 	        toolExplore: {
                 statistic: "distance-min"
 	        }

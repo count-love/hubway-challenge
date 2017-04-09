@@ -17,7 +17,7 @@ $node $uglifyjs external/jquery/2.1.1/jquery.js external/jquery.easing/1.4.0/jqu
     external/jbinary/2.1.3/jbinary.js directions/transit-layer.js datasource.js explore.js \
     story/story.js story/story-data.js -m -c unsafe=true -o build/js/hubway.min.js
 
-$node $cleancss --skip-rebase -o build/css/hubway.css external/bootstrap/3.3.7/bootstrap.css \
+$node $cleancss --skip-rebase -o build/css/hubway.min.css external/bootstrap/3.3.7/bootstrap.css \
 	external/leaflet/1.0.3/leaflet.css story/story.css
 
 # data
