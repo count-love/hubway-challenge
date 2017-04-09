@@ -38,20 +38,16 @@
 </head>
 <body>
 <div id="map"></div>
-<div id="sidebar-tabs">
-    <!-- TODO: replace with a little logo and an about link? -->
-    <h1>Hubway Challenge</h1>
-    <ul class="nav nav-tabs nav-justified">
-        <li role="presentation" class="active"><a href="#" data-story-mode="story">Findings</a></li>
-        <li role="presentation"><a href="#" data-story-mode="explore">Explore</a></li>
-    </ul>
-</div>
 <div class="sidebar" id="sidebar-story">
     <div id="story">
         <div class="story-container">
-            <div class="story-pane" data-pane="intro">
-                <h2>What is extraordinary?</h2>
+            <div class="story-pane" data-pane="intro" data-title="What is extraordinary?">
                 <div class="story-body">
+                    <header>
+                        <div class="logo"></div>
+                        <h1>2017 Hubway Challenge</h1>
+                    </header>
+
                     <p>As engineers and scientists with a keen interest in civic responsibility and public policy, we
                         searched through the last six years of Hubway data to find the unusual and the extraordinary.
                         With the curiosity of a five-year old, we asked "Where?" and “Why?” and "How?" at every turn of
@@ -336,6 +332,17 @@
                 <!-- end transit interface -->
             </div>
         </div>
+    </div>
+</div>
+<div id="sidebar-info">
+    <div class="visible-exploring">
+        <a href="#" data-story-mode="story" class="btn btn-primary btn-lg btn-block">Read Our Findings</a>
+    </div>
+    <div class="hidden-exploring">
+        <a href="#" data-story-mode="explore" class="btn btn-warning btn-lg btn-block">Explore The Data</a>
+    </div>
+    <div class="details">
+        <a href="#">About</a> &bullet; By <a href="https://www.tommyleung.com/">Tommy</a> &amp; <a href="https://www.nathanntg.com/">Nathan</a>.
     </div>
 </div>
 </body>

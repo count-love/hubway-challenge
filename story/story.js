@@ -182,6 +182,9 @@
 			}
 		}
 
+		// toggle body class
+		$("body").toggleClass("exploring", new_is_exploring);
+
 		// toggle buttons
 		var buttons = $("[data-story-mode]");
 		buttons.closest("li").toggleClass("active", !new_is_exploring);
@@ -402,11 +405,14 @@
 				var pane = new StoryPane(el, indicator);
 
 				// add tooltip
-				indicator.tooltip({
-					placement: "right",
-					title: pane.$el.find("h2").first().text(),
-					container: "#story"
-				});
+				var tooltip_title = pane.$el.data("title") || pane.$el.find("h2").first().text();
+				if (tooltip_title) {
+					indicator.tooltip({
+						placement: "right",
+						title: tooltip_title,
+						container: "#story"
+					});
+				}
 
 				// mark as inactive
 				pane.$el.addClass("inactive");
@@ -476,7 +482,7 @@
 			$story.on("click", "[data-story-alt]", onClickAlternate);
 			$story.on("click", "[data-story-mode]", onClickMode);
 		},
-		setupTabs: function(el) {
+		setupController: function(el) {
 			$(el).on("click", "[data-story-mode]", onClickMode);
 		},
 		setupExploreTool: function(el) {

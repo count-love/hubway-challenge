@@ -7,7 +7,7 @@ html, body {
 }
 
 #map {
-    width: 65%;
+    width: 60%;
     height: 100%;
     position: absolute;
     top: 0;
@@ -36,12 +36,12 @@ html, body {
 }
 
 .overlay-info {
-    background-color: #0071BC;
+    background-color: #009245;
 }
 
-.sidebar, #sidebar-tabs {
+.sidebar, #sidebar-info {
     position: absolute;
-    width: 35%;
+    width: 40%;
     right: 0;
     background-color: #fff;
     border-left: 1px solid black;
@@ -49,8 +49,8 @@ html, body {
 }
 
 .sidebar {
-    top: 112px;
-    bottom: 0;
+    top: 0;
+    bottom: 100px;
     padding: 10px;
 }
 
@@ -63,23 +63,62 @@ html, body {
     overflow-y: auto;
 }
 
-#sidebar-tabs {
-    position: absolute;
-    top: 0;
-    padding: 10px 10px 0 10px;
-    height: 112px;
-    overflow: hidden;
-    z-index: 4;
+#sidebar-tools .panel-heading {
+    border-bottom: 0;
 }
 
-#sidebar-tabs h1 {
-    margin: 0 0 10px 0;
-    font-size: 32px;
-    line-height: 40px;
+#sidebar-info {
+    position: absolute;
+    bottom: 0;
+    padding: 20px 10px 10px 10px;
+    height: 100px;
+    overflow: hidden;
+    z-index: 4;
+    background-color: #16396A;
+    border-top: 1px solid black;
+    color: white;
+
+    -webkit-transition: color, background-color 0.5s ease-in-out;
+    -moz-transition: color, background-color 0.5s ease-in-out;
+    -o-transition: color, background-color 0.5s ease-in-out;
+    transition: color, background-color 0.5s ease-in-out;
+}
+
+.exploring #sidebar-info {
+    background-color: #fff;
+    color: black;
+}
+
+#sidebar-info .details {
+    margin-top: 5px;
+    text-align: center;
+    font-size: 80%;
+}
+
+#sidebar-info .details a {
+    color: #3dbbee;
+    text-decoration: none;
+}
+
+.exploring .hidden-exploring {
+    display: none;
+}
+.visible-exploring {
+    display: none;
+}
+.exploring .visible-exploring {
+    display: block;
 }
 
 #sidebar-story {
     padding: 0; /* no padding for story */
+    background-color: #16396A;
+    color: #fff;
+}
+
+.story-pane a {
+    color: #3dbbee;
+    text-decoration: underline;
 }
 
 #story {
@@ -91,7 +130,7 @@ html, body {
 .story-container {
     position: absolute;
     top: 0;
-    left: 24px; /* space for indicators */
+    left: 36px; /* space for indicators */
     right: 0;
     bottom: 0;
     overflow: auto;
@@ -100,7 +139,7 @@ html, body {
 .story-indicators {
     position: absolute;
     top: 50%;
-    left: 10px;
+    left: 16px;
     list-style: none;
     padding: 0;
     margin: 0 0 0 0;
@@ -114,7 +153,7 @@ html, body {
     text-indent: -999px;
     cursor: pointer;
     background-color: transparent;
-    border: 1px solid black;
+    border: 1px solid white;
     border-radius: 10px;
 }
 
@@ -122,7 +161,7 @@ html, body {
     width: 12px;
     height: 12px;
     margin: 10px 0;
-    background-color: black;
+    background-color: white;
 }
 
 .story-pane {
@@ -135,6 +174,19 @@ html, body {
     transition: opacity 0.5s ease-in-out;
 }
 
+/* header */
+header .logo {
+    margin-top: 55px;
+    background: url(../img/bike.svg) no-repeat center center;
+    background-size: contain;
+    height: 196px;
+}
+
+header h1 {
+    margin-top: 0;
+    font-size: 28px;
+}
+
 /* inactive */
 .story-pane.inactive {
     opacity: 0.2;
@@ -142,23 +194,23 @@ html, body {
     cursor: pointer;
 }
 .story-pane.inactive a {
-    color: #aaa !important;
+    color: #eee !important;
 }
 .story-pane.inactive [data-story-alt] {
-    border-bottom-color: #aaa !important;
+    border-bottom-color: #eee !important;
 }
 
 .story-pane [data-story-alt] {
-    color: #2f6891;
+    color: #3dbbee;
     text-decoration: none;
-    border-bottom: dashed 1px #08c;
+    border-bottom: dashed 1px #3dbbee;
     cursor: pointer;
 }
 
 .story-pane [data-story-alt].active {
-    color: #3dbbee;
+    color: #fff;
     text-decoration: none;
-    border-bottom: dashed 1px #08c;
+    border-bottom: dashed 1px #fff;
     cursor: default;
     font-weight: bold;
 }
@@ -177,7 +229,7 @@ form > div {
     position: absolute;
     text-align: center;
     vertical-align: middle;
-    z-index: 1000;
+    z-index: 999;
     background-color: rgba(255, 255, 255, 0.7);
     font-size: 36px;
     font-weight: 100;
@@ -188,10 +240,10 @@ form > div {
 @media screen and (min-width: 1200px) {
     #map {
         width: auto;
-        right: 420px;
+        right: 480px;
     }
-    .sidebar, #sidebar-tabs {
-        width: 420px;
+    .sidebar, #sidebar-info {
+        width: 480px;
     }
 }
 
@@ -219,6 +271,11 @@ form > div {
         height: 15px;
         margin: 10px 0;
         background-color: black;
+    }
+
+    header .logo {
+        margin-top: 35px;
+        height: 142px;
     }
 }
 
@@ -255,7 +312,7 @@ form > div {
         overflow-y: auto;
     }
 
-    #sidebar-tabs {
+    #sidebar-info {
         display: none; /* TODO: figure outalternate configuration */
     }
 }
