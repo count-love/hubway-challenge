@@ -62,34 +62,33 @@
             <div class="story-pane" data-pane="under-util-1">
                 <h2>Are any stations underutilized inside the city?</h2>
                 <div class="story-body">
-                    <p>By plotting total <a data-story-alt="default">starts</a> and <a data-story-alt="stops">stops</a>
-                        for each station, we confirmed our intuition that stations in
-                        the middle of the Hubway network typically have the highest number of riders (and stations at
-                        the edge of the Hubway network have the fewest). We wondered if we could find any stations that
-                        broke this pattern: are there any stations inside the city that are underused relative to the
-                        stations nearby? And if so, why?</p>
+                    <p>Plotting total <a data-story-alt="default">starts</a> and <a data-story-alt="stops">stops</a>
+                        for each station confirms an intuitive result: stations in the center of the Hubway network 
+                        typically have the highest number of trips, and stations at
+                        the edge of the Hubway network tend to have the fewest. We wondered if any outlier stations 
+                        break this pattern: are there any stations inside the city that are underused relative to 
+                        other nearby stations? If so, why?</p>
                 </div>
             </div>
             <div class="story-pane" data-pane="under-util-2">
                 <h2>Are any stations underutilized inside the city?</h2>
                 <div class="story-body">
                     <p>To answer this question, we measured each station’s “utilization” by counting the number of
-                        starts and stops and dividing by the number of docks at the station.</p>
-                </div>
-            </div>
-            <div class="story-pane" data-pane="under-util-3"><!-- potentially combine with previous? -->
-                <h2>Are any stations underutilized inside the city?</h2>
-                <div class="story-body">
+                        trip starts and ends and dividing by the number of docks and hours.</p>
+                        
                     <p>Then, we searched for stations with unusually small “utilization” rates by grouping (clustering)
-                        together stations based on their utilization rates and searching for small circles surrounded by
-                        large circles. We found the following odd stations: Dana Park, in Cambridgeport; Third/Binney,
-                        Sixth/Binney, and Kendall St. in East Cambridge; New Balance, on Newbury St.; and Brookline at
-                        Burlington, near Fenway.</p>
+                        together stations and searching for small circles surrounded by
+                        large circles.</p>
+                        
+                    <p>We found several unusually underutilized stations that are at least one year old: 
+                        <a data-story-alt="danaPark">Dana Park</a>, in Cambridgeport; 
+                        <a data-story-alt="eastCambridge">Binney St./Sixth St and Kendall St.</a> in East Cambridge; 
+                        and <a data-story-alt="brookline">Brookline at Burlington St.</a>, near Fenway.</p>
                 </div>
             </div>
 
             <div class="story-pane" data-pane="under-util-dana-park">
-                <h2>Dana Park, Cambridge</h2>
+                <h2>Underutilization: Dana Park, Cambridgeport</h2>
                 <div class="story-body">
                     <p>We estimated average commute times based on the Hubway data and combined this information with
                         walking and public transit data to determine the fastest mode of transportation from any
@@ -102,7 +101,7 @@
             </div>
 
             <div class="story-pane" data-pane="under-util-east-cambridge">
-                <h2>East Cambridge</h2>
+                <h2>Underutilization: East Cambridge</h2>
                 <div class="story-body">
                     <p>East Cambridge exhibits similar trends to Cambridgeport: it is relatively underserved by public 
                     transportation based on commute times, and Hubway often is the fastest mode of transit. Why are the 
@@ -111,22 +110,72 @@
             </div>
             
             <div class="story-pane" data-pane="under-util-brookline">
-                <h2>Brookline at Burlington St</h2>
+                <h2>Underutilization: Brookline at Burlington St., Boston</h2>
                 <div class="story-body">
-                    <p>Brookline at Burlington, near Fenway, is <a data-story-alt="default">oddly underutilized</a>. 
-                    Additionally, <a data-story-alt="popular">the most popular routes from this station</a> are to relatively far stations. Perhaps the 
-                    dead-end location of this station makes it inconvenient to access or difficult to discover?</p>
+                    <p>Brookline at Burlington St., near Fenway, is an unusual station: in addition to 
+                    its <a data-story-alt="default">low utilization</a>, <a data-story-alt="popular">the most popular routes
+                    from this station</a> are to relatively far stations. Perhaps the location of this station on a dead-end 
+                    street makes it inconvenient to access or difficult to discover?</p>
                 </div>
             </div>
             
             <div class="story-pane" data-pane="under-util-boston">
-                <h2>Winter Availability in Boston</h2>
+                <h2>Underutilization: Winter Availability in Boston</h2>
                 <div class="story-body">
                     <p>Analyzing utilization rates also led us to wonder why Boston shuts down some of its Hubway stations 
                     in the winter when Cambridge does not. <a data-story-alt="default">Utilization rates for Cambridge and Boston</a>
-                    are fairly similar, and although <a data-story-alt="winter">winter utilization</a> is the lowest of any time of the year, riders 
-                    still use Hubway in Cambridge. Perhaps if Boston left its stations open, riders would continue to use those
-                    stations as well?</p>
+                    are fairly similar, and although <a data-story-alt="winter">winter utilization</a> is the lowest of any time 
+                    of the year, riders still use Hubway throughout the winter in Cambridge. Why not keep the Boston stations open?</p>
+                </div>
+            </div>
+                        
+            <div class="story-pane" data-pane="potential-new-station-lead">
+                <h2>Why not put a station here?</h2>
+                <div class="story-body">
+                    <p>In addition to searching for potentially under-utilized stations, we also wondered if any communities might 
+                    benefit from the installation of a new Hubway station. For example, because there are relatively few 
+                    stations in East Somerville, <a data-story-alt="default">walking currently is the fastest way to 
+                    travel from Inman Square to large parts of East Somerville</a>. Are there other areas where walking 
+                    is the often the fastest mode of travel? Could these areas benefit from a Hubway station?</p>
+                    
+                    <p>Combining travel times from the Hubway dataset with walking 
+                    and public transit estimates, we identified areas in <a data-story-alt="east-somerville">East Somerville near Winter Hill</a> and 
+                    <a data-story-alt="brookline">parts of Brookline along Kent Street</a> where new stations could help reduce commute times.</p>
+                    
+                    <p>Our model is pessimistic and always assumes that someone 
+                    shows up halfway between buses during normal (median) operating schedules. During peak-time travel times 
+                    or with well-planned trips, transit rides can still be more convenient.</p>
+                    </p>
+                </div>
+            </div>
+                        
+                        
+            <div class="story-pane" data-pane="tidbits">
+                <h2>Fun Facts and Other Tidbits</h2>
+                <div class="story-body">
+                    <p>Although we've asked a few key questions to highlight potentially underutilized stations and
+                        under-served areas, we've left a lot to explore! Below, we've included some of the fun facts
+                        that we stumbled upon during our own adventure in finding the extraordinary in the Hubway data.
+                        Read on to learn what we've found, or <a href="#" data-story-mode="explore">conduct your own
+                            exploration</a>!</p>
+                </div>
+            </div>
+
+            <div class="story-pane" data-pane="tidbits-city-struct">
+                <h2>See the city in a transit map</h2>
+                <div class="story-body">
+                    <p>See the <a data-story-alt="default">city structure</a> spiraling out from South Station. Or the
+                        travel time from <a data-story-alt="harvard">Harvard Square</a> reveals bus routes serving
+                        the neighborhoods to the west.
+                </div>
+            </div>
+
+            <div class="story-pane" data-pane="tidbits-city-popular">
+                <h2>What are popular Hubway trips?</h2>
+                <div class="story-body">
+                    <p>Popular routes around schools such as <a data-story-alt="default">MIT</a> and
+                        <a data-story-alt="tufts">Tufts</a> are heavily used and frequently mirror shuttle routes that
+                        have long been offered by the schools.</p>
                 </div>
             </div>
                         

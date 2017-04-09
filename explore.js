@@ -378,7 +378,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: ' trips/day',
 	    unitRounding: 0,
-	    markerScale: 50,
+	    markerScale: 10,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,
@@ -414,7 +414,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: 'trips/day',
 	    unitRounding: 0,
-	    markerScale: 50,
+	    markerScale: 10,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,	    
@@ -490,7 +490,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: 'trips/dock-hour',
 	    unitRounding: 3,
-	    markerScale: 0.001,
+	    markerScale: 0.0002,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,	    
@@ -1339,7 +1339,8 @@ function addToMap(new_map) {
 
 	// redraw points after zoom
 	map.on('zoomend', function() {
-	    console.log(map.getBounds());
+	    var bounds = map.getBounds();
+	    console.log("[[%s, %s], [%s, %s]]", bounds._southWest.lat, bounds._southWest.lng, bounds._northEast.lat, bounds._northEast.lng);
 	    redraw();
 	});
 
