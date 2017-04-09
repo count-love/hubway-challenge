@@ -8,8 +8,8 @@
 	var panes = [], active = -1;
 	var map;
 
-	// v
-	var is_exploring = false;
+	// blocking modes
+	var is_redrawing = false, is_exploring = false;
 
 	// UI math and variables
 	var pane_height;
@@ -232,8 +232,8 @@
 	}, 100);
 
 	function onMouseWheel(ev) {
-		// is exploring? disable mouse wheel
-		if (is_exploring) { return; }
+		// is redrawing? or exploring? disable mouse wheel
+		if (is_exploring || is_redrawing) { return; }
 
 		// only vertical scroll
 		if (0 === ev.deltaY) { return; }
@@ -568,14 +568,15 @@
 				if (installed_explore) {
 					ExploreTool.clearMap();
 				}
-				return;
+
+				return true;
 			}
 
 			// close in explore
 			$("#tool-explore").addClass("in");
 
 			// install
-			$.when(this.installExploreLayer()).done(function() {
+			return $.when(this.installExploreLayer()).done(function() {
 				if (config.stations) {
 					if ("all" === config.stations) {
 						ExploreTool.setAllStations(false);
@@ -654,14 +655,15 @@
 				if (layer_transit) {
 					layer_transit.clearOverlay();
 				}
-				return;
+
+				return true;
 			}
 
 			// open in explore
 			$("#tool-transit").addClass("in");
 
 			// install
-			$.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
+			return $.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
 				// set mode (do not redraw)
 				layer_transit.setMode(config.mode || "mode", false);
 
@@ -696,9 +698,20 @@
 			});
 		},
 		configureMap: function(config) {
+			// set is redrawing
+			is_redrawing = true;
+			var loading = _createLoadingOverlay(map.getContainer());
+
 			// configure exploration layers
-			this.configureExploreLayer(config.toolExplore || false);
-			this.configureTransitLayer(config.toolTransit || false);
+			setTimeout(function() {
+				$.when(
+					Story.configureExploreLayer(config.toolExplore || false),
+					Story.configureTransitLayer(config.toolTransit || false)
+				).always(function() {
+					loading.remove();
+					is_redrawing = false;
+				});
+			}, 0);
 
 			// move map view
 			if (config.view) {
