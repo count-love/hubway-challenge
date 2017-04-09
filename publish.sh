@@ -32,6 +32,7 @@ cp -f img/favicon.ico build/img/favicon.ico
 cp -f img/favicon-196x196.png build/img/favicon-196x196.png
 
 # html
+cp -f .htaccess build/.htaccess
 cp -f index.html build/index.html
 
 # rsync -avzc build/ countlove@countlove.org:hubway.countlove.org/
