@@ -195,17 +195,13 @@
 
 	var onScrollStop = _debounce(function() {
 		// use scroll
-		var scroll_top = $container.scrollTop(), offset_top;
+		var scroll_center = $container.scrollTop() + $container.height() / 2, el, offset_center;
 		var closest = null, closest_distance, distance;
 		for (var i = 0; i < panes.length; ++i) {
-			offset_top = panes[i].$el[0].offsetTop;
+			el = panes[i].$el[0];
+			offset_center = el.offsetTop + el.offsetHeight / 2;
 
-			// above the fold
-			if (offset_top < (scroll_top - 40)) {
-				continue;
-			}
-
-			distance = Math.abs(scroll_top - offset_top);
+			distance = Math.abs(offset_center - scroll_center);
 			if (null === closest || distance < closest_distance) {
 				closest = i;
 				closest_distance = distance;
