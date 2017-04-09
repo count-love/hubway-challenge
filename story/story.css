@@ -190,3 +190,26 @@ form > div {
 @media screen and (max-width: 979px) {
     /* TODO: write me */
 }
+
+/* transit layer */
+.transit-scale {
+    /*width: 250px;
+    height: 70px;*/
+    background-color: #eee;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
+    padding: 2px 8px;
+    /*border-radius: 4px;*/
+}
+
+.transit-scale .entry {
+}
+
+.transit-scale .swatch {
+    height: 12px;
+    width: 12px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+

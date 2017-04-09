@@ -1,4 +1,42 @@
 (function(L) {
+	// Not for public use, created by the transit layer which directly passes event
+	var ControlLegend = L.Control.extend({
+		options: {
+			position: "bottomright"
+		},
+		onAdd: function(map) {
+			this._last = "off";
+
+			return L.DomUtil.create('div', 'transit-scale');
+		},
+		onRemove: function(map) {
+			// nothing to do
+		},
+		redrawOff: function() {
+			if ("off" === this._last) { return; }
+
+			// empty
+			this._container.innerHTML = '';
+			this._last = "off"; // saves a little bit by preventing redraw
+
+		},
+		redrawScale: function(d3_scale) {
+			if ("scale" === this._last) { return; }
+
+			this._last = "scale"; // saves a little bit by preventing redraw
+		},
+		redrawKey: function(names, colors) {
+			if ("key" === this._last) { return; }
+
+			var html = '';
+			for (var i = 0, maxi = Math.min(names.length, colors.length); i < maxi; ++i) {
+				html += '<div class="entry"><span class="swatch" style="background-color:' + colors[i] + ';"></span> ' + names[i] + '</div>';
+			}
+			this._container.innerHTML = html;
+			this._last = "key"; // saves a little bit by preventing redraw
+		}
+	});
+
 	/* BEGIN LEAFLET LAYER */
 	L.TransitLayer = L.FeatureGroup.extend({
 		statics: {
@@ -7,13 +45,15 @@
 		},
 		options: {
 			resizeOnAdd: true,
+			modeNames: ["Walking", "Hubway", "MBTA", "Hubway + MBTA"],
 			modeColors: ["blue", "green", "red", "orange"],
 			timeScaleDomain: [0, 1800, 3600],
 			timeScaleRange: ["#4575b4", "#ffffbf", "#a50026"],
 			hybridTimeContours: [5, 15, 30, 45, 60],
 			opacityMode: 0.3,
 			opacityTime: 0.6,
-			listenClick: true
+			listenClick: true,
+			legend: true
 		},
 		initialize: function(router, options) {
 			// private properties
@@ -22,6 +62,7 @@
 			this._mode = L.TransitLayer.MODE_MODE;
 			this._grid = router.grid;
 			this._router = router;
+			this._legend = null;
 
 			// set options
 			L.setOptions(this, options);
@@ -90,8 +131,20 @@
 			if (this.options.resizeOnAdd) {
 				this.sizeMapForGrid(false);
 			}
+
+			// create legend
+			if (this.options.legend) {
+				this._legend = new ControlLegend();
+				this._legend.addTo(map);
+			}
 		},
 		onRemove: function(map) {
+			// remove legend
+			if (this._legend) {
+				this._legend.remove();
+				this._legend = null;
+			}
+
 			// remove listener for click
 			map.off("click", this.click, this);
 
@@ -304,6 +357,9 @@
 
 			// no result? nothing to do
 			if (!this._result) {
+				// clear legend
+				this._legend && this._legend.redrawOff();
+
 				return;
 			}
 
@@ -311,11 +367,13 @@
 			switch (this._mode) {
 				case L.TransitLayer.MODE_TIME:
 					this._drawTime();
+					this._legend && this._legend.redrawScale(this._d3Scale());
 					break;
 
 				case L.TransitLayer.MODE_MODE:
 				default:
 					this._drawMode();
+					this._legend && this._legend.redrawKey(this.options.modeNames, this.options.modeColors);
 					break;
 			}
 		}
