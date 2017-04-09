@@ -42,9 +42,12 @@ var markerOptions = {
 // The number of stations to show text results for
 var maxStations = 5;
 
+// user-set marker scale
+var markerZoom = 10;
 var defaultMarkerRadius = 7.5;
-var cssColors = ['blue','gray','green','beige','maroon','blueviolet','aquamarine','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
-// 'navy','purple','fuchsia', 'white','olive','yellow','black','silver','red','azure','lime','antiquewhite','beige','bisque','blanchedalmond''teal','aqua',
+
+var cssColors = ['navy','blue','green','blueviolet','aquamarine','maroon','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
+// 'purple','fuchsia','gray','white','beige','olive','yellow','black','silver','red','azure','lime','antiquewhite','beige','bisque','blanchedalmond''teal','aqua',
 
 // available filter options for queries
 var queryFilters = {
@@ -375,7 +378,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: ' trips/day',
 	    unitRounding: 0,
-	    markerScale: 5,
+	    markerScale: 50,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,
@@ -411,7 +414,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: 'trips/day',
 	    unitRounding: 0,
-	    markerScale: 5,
+	    markerScale: 50,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,	    
@@ -485,8 +488,8 @@ var illustrations = {
 	
 	'utilization': {
 	    group: 'trips',
-	    unit: 'total trips/dock',
-	    unitRounding: 0,
+	    unit: 'trips/dock-hour',
+	    unitRounding: 3,
 	    markerScale: 0.001,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
@@ -918,9 +921,9 @@ function setupFilters(defaults) {
             var tooltip = button['tooltip'];
         
             if (tooltip) {
-                filters += "<button class='btn btn-default js_" + group + "' id='" + id + "' title='" + tooltip + "'>" + label + "</button>";
+                filters += "<button class='btn btn-default btn-sm js_" + group + "' id='" + id + "' title='" + tooltip + "'>" + label + "</button>";
             } else {
-                filters += "<button class='btn btn-default js_" + group + "' id='" + id + "'>" + label + "</button>";        
+                filters += "<button class='btn btn-default btn-sm js_" + group + "' id='" + id + "'>" + label + "</button>";        
             }            
         });
     
@@ -1167,7 +1170,7 @@ function showStationStatistic(forStatistic, properties) {
                 var options = illustrations[forStatistic].markerOptions;
         
                 if (!useRawMarkerSize) {
-                    markerSize = markerScale ? markerSize * Math.sqrt(defaultMarkerRadius / markerScale) : 0;
+                    markerSize = markerScale ? markerZoom * markerSize * Math.sqrt(defaultMarkerRadius / markerScale) : 0;
                 }
 
                 var cluster = "default";
@@ -1335,7 +1338,10 @@ function addToMap(new_map) {
 	map.getPane('data').style.zIndex = 299;
 
 	// redraw points after zoom
-	map.on('zoomend', redraw);
+	map.on('zoomend', function() {
+	    console.log(map.getBounds());
+	    redraw();
+	});
 
     // load data source
 	var ret = DataSource.loadData("data/trips.bin", "data/stations.json")
@@ -1428,7 +1434,7 @@ function addToMap(new_map) {
 	    }
 	    
 	    var name = illustrations[query]['buttonName'] ? illustrations[query]['buttonName'] : query;
-	    var button = '<button class="btn btn-default js_query" id="js_' + query + '">' + name + '</button>';
+	    var button = '<button class="btn btn-default btn-sm js_query" id="js_' + query + '">' + name + '</button>';
 	    $("#js_queries").append(button);
 
 
@@ -1438,12 +1444,12 @@ function addToMap(new_map) {
 	});
 	
 	$("#js_markerSize_minus").on("click", function() {
-    	defaultMarkerRadius /= 2;
+    	markerZoom /= 2;
     	redraw();
 	});
 
 	$("#js_markerSize_plus").on("click", function() {
-    	defaultMarkerRadius *= 2;
+    	markerZoom *= 2;
     	redraw();
 	});
 	
@@ -1560,7 +1566,7 @@ root.ExploreTool = {
 	    }
     },
     setMarkerSize: function(marker_size, should_redraw) {
-	    $("#js_markerSlider").slider("value", marker_size);
+        markerScale = marker_size;
 
 	    if ("undefined" === typeof should_redraw || false !== should_redraw) {
 		    redraw();
