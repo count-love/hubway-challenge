@@ -15,12 +15,18 @@
 		redrawOff: function() {
 			if ("off" === this._last) { return; }
 
+			// add class
+			L.DomUtil.addClass(this._container, "off");
+
 			// empty
 			this._container.innerHTML = '';
 			this._last = "off"; // saves a little bit by preventing redraw
 		},
 		redrawScale: function(seconds, colors) {
 			if ("scale" === this._last) { return; }
+
+			// add class
+			L.DomUtil.removeClass(this._container, "off");
 
 			// make (potentially replace with nice d3 based approach)
 			var html = '<h6>Travel Time</h6><svg width="240" height="20" version="1.1"><defs><linearGradient id="scale-gradient" x1="0" x2="1" y1="0" y2="0">';
@@ -36,6 +42,9 @@
 		},
 		redrawKey: function(names, colors) {
 			if ("key" === this._last) { return; }
+
+			// add class
+			L.DomUtil.removeClass(this._container, "off");
 
 			var html = '<h6>Best Mode of Transit</h6>';
 			for (var i = 0, maxi = Math.min(names.length, colors.length); i < maxi; ++i) {

@@ -207,6 +207,9 @@ form > div {
     border-radius: 4px;
     padding: 7px 10px;
 }
+.transit-legend.off {
+    display: none;
+}
 
 .transit-legend .swatch {
     height: 12px;
