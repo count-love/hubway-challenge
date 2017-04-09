@@ -1084,7 +1084,6 @@ function showStationStatistic(forStatistic, properties) {
         queryResults = illustrationCache[cacheKey];
         meansSorted = queryResults['clusterMeansSorted'];
         means = queryResults['clusterMeansOriginalArray'];
-        console.log("USING CACHED RESULT BECAUSE TOMMY IS GRAPE SODA LOLLIPOP");
 
     } else {
     

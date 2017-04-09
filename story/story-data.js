@@ -64,6 +64,14 @@ jQuery(function($) {
 				resize: false
 			}
 		}
+	}).addAlternate("danaParkUtilization", {
+		map: {
+			view: [[42.350012811890636, -71.12578868865968], [42.36942019026506, -71.08888149261476]],
+			toolExplore: {
+				statistic: "utilization",
+				clusters: 7
+			}
+		}
 	});
 
 	Story.getPane("under-util-east-cambridge").configure({
@@ -72,6 +80,14 @@ jQuery(function($) {
 			toolTransit: {
 				start: 5873,
 				resize: false
+			}
+		}
+	}).addAlternate("eastCambridgeUtilization", {
+		map: {
+			view: [[42.36009778602673, -71.11192703247072], [42.37427109825652, -71.0750198364258]],
+			toolExplore: {
+				statistic: "utilization",
+				clusters: 7
 			}
 		}
 	});
@@ -141,9 +157,9 @@ jQuery(function($) {
 	});
 	
 	// no change
-	Story.getPane("tidbits").configure({});
+	Story.getPane("funFacts").configure({});
 	
-	Story.getPane("tidbits-city-struct").configure({
+	Story.getPane("funFacts-city-struct").configure({
 		map: {
 			toolTransit: {
 				source: "data/directions-l.json",
@@ -170,24 +186,6 @@ jQuery(function($) {
 				start: 2285
 			}
 		}
-	}).addAlternate("chelseaToBoston", {
-		map: {
-			toolTransit: {
-				start: 9604
-			}
-		}
-	}).addAlternate("charlestownToBoston", {
-		map: {
-			toolTransit: {
-				start: 7203
-			}
-		}
-	}).addAlternate("westSomervilleToBoston", {
-		map: {
-			toolTransit: {
-				start: 9884
-			}
-		}
 	}).addAlternate("memberPace", {
 		map: {
 		    view: [[42.29724647750399, -71.176815032959], [42.41927472203913, -70.96429824829103]],
@@ -210,7 +208,7 @@ jQuery(function($) {
 		}
 	});
 	
-	Story.getPane("tidbits-city-popular").configure({
+	Story.getPane("funFacts-city-popular").configure({
 	    map: {
 	        toolExplore: {
                 statistic: "distance-min"
@@ -280,7 +278,7 @@ jQuery(function($) {
 	    }	
 	});
 	
-	Story.getPane("tidbits-work-life").configure({
+	Story.getPane("funFacts-work-life").configure({
 	    map: {
 	        toolExplore: {
 	            filter: {
