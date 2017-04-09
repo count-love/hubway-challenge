@@ -42,9 +42,13 @@ var markerOptions = {
 // The number of stations to show text results for
 var maxStations = 5;
 
+// user-set marker scale
+var markerZoom = 10;
 var defaultMarkerRadius = 7.5;
-var cssColors = ['blue','navy',,'gray','green','maroon','blueviolet','aquamarine','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
-// 'purple','fuchsia', 'white','olive','yellow','black','silver','red','azure','lime','antiquewhite','beige','bisque','blanchedalmond''teal','aqua',
+
+var cssColors = ['navy','blue','green','blueviolet','aquamarine','maroon','brown','burlywood','cadetblue','chartreuse','chocolate','coral','cornflowerblue','cornsilk','crimson','cyan','darkblue','darkcyan','darkgoldenrod','darkgray','darkgreen','darkgrey','darkkhaki','darkmagenta','darkolivegreen','darkorange','darkorchid','darkred','darksalmon','darkseagreen','darkslateblue','darkslategray','darkslategrey','darkturquoise','darkviolet','deeppink','deepskyblue','dimgray','dimgrey','dodgerblue','firebrick','floralwhite','forestgreen','gainsboro','ghostwhite','gold','goldenrod','greenyellow','grey','honeydew','hotpink','indianred','indigo','ivory','khaki','lavender','lavenderblush','lawngreen','lemonchiffon','lightblue','lightcoral','lightcyan','lightgoldenrodyellow','lightgray','lightgreen','lightgrey','lightpink','lightsalmon','lightseagreen','lightskyblue','lightslategray','lightslategrey','lightsteelblue','lightyellow','limegreen','linen','mediumaquamarine','mediumblue','mediumorchid','mediumpurple','mediumseagreen','mediumslateblue','mediumspringgreen','mediumturquoise','mediumvioletred','midnightblue','mintcream','mistyrose','moccasin','navajowhite','oldlace','olivedrab','orangered','orchid','palegoldenrod','palegreen','paleturquoise','palevioletred','papayawhip','peachpuff','peru','pink','plum','powderblue','rosybrown','royalblue','saddlebrown','salmon','sandybrown','seagreen','seashell','sienna','skyblue','slateblue','slategray','slategrey','snow','springgreen','steelblue','tan','thistle','tomato','turquoise','violet','wheat','whitesmoke','yellowgreen'];
+// 'purple','fuchsia','gray','white','beige','olive','yellow','black','silver','red','azure','lime','antiquewhite','beige','bisque','blanchedalmond''teal','aqua',
+
 // available filter options for queries
 var queryFilters = {
     'day': [
@@ -97,7 +101,6 @@ var queryFilters = {
 
 var stationGroups = [
     {'label': 'Coffee, Coffee', stops: [147, 184, 106, 62]},
-    {'label': 'MBTA Red Line', stops: [172, 162, 181, 158, 147, 148, 143, 142, 136, 135, 107, 105, 10]},
     {'label': 'Harvard', stops: [6, 7, 15, 131, 145, 146, 147, 148, 150, 151, 153, 154, 166, 192]},
     {'label': 'MIT', stops: [135, 136, 137, 138, 165, 169, 170]},
     {'label': 'Central Square', stops: [29, 142, 143]},
@@ -107,7 +110,7 @@ var stationGroups = [
     {'label': 'Somerville', stops: [176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 189, 195]}    
 ];
 
-var kMeansGroups = [0, 5, 10, 20];
+var kMeansGroups = [0, 3, 5, 7, 10];
 
 //--- kMeans clustering code, inspired by
 // https://burakkanber.com/blog/machine-learning-k-means-clustering-in-javascript-part-1/
@@ -375,7 +378,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: ' trips/day',
 	    unitRounding: 0,
-	    markerScale: 5,
+	    markerScale: 50,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,
@@ -411,7 +414,7 @@ var illustrations = {
 	    group: 'trips',
 	    unit: 'trips/day',
 	    unitRounding: 0,
-	    markerScale: 5,
+	    markerScale: 50,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,	    
@@ -485,9 +488,9 @@ var illustrations = {
 	
 	'utilization': {
 	    group: 'trips',
-	    unit: '',
+	    unit: 'trips/dock-hour',
 	    unitRounding: 3,
-	    markerScale: 0.00001,
+	    markerScale: 0.001,
 	    useRawMarkerSize: false,
 	    markerOptions: markerOptions.data,
 	    clusteringEnabled: true,	    
@@ -574,6 +577,7 @@ var illustrations = {
                                     // update the peak start+stop trips observed
                                     result[station]['max'] = Math.max(result[station]['max'], v[station][time]);
                             
+                                    // update the start+stop trips that match the current query filters
                                     if (startYear && startMonth && startWeekday && startHourSelected) {
                                         if (!result[station]['matchedCounts'][startHour]) {
                                             result[station]['matchedCounts'][startHour] = v[station][time];
@@ -602,62 +606,20 @@ var illustrations = {
             
             var numberOfHours = selectedFilters['startHour'] == null ? 24 : Object.keys(selectedFilters['startHour']).length;
             
-            var results = {'averages': {}, 'plots': {}};
+            var results = {'averages': {}};
             Object.keys(utilization).forEach(function(station) {
-
-                // in the peak hourly usage aggregation, we are aggregating across the 
-                // same weekday in every month
-                // we need to divide by 4 to estimate a single day's contribution
-                utilization[station]['max'] /= 4;                
+               
                 results['averages'][station] = 0;
-
-                if (!results['plots'][station]) {
-                    results['plots'][station] = [];
-                }
 
                 utilization[station]['matchedCounts'].forEach(function(hourlyCount) {
                     results['averages'][station] += hourlyCount;
-                    results['plots'][station].push(hourlyCount / (numberOfYears * numberOfDays * utilization[station]['max']));
                 });
                 
-                results['averages'][station] /= (utilization[station]['max'] * numberOfYears * numberOfDays * numberOfHours);
+                results['averages'][station] = Hubway.stations[station]['docks'] ? 
+                    results['averages'][station] / (Hubway.stations[station]['docks'] * numberOfYears * numberOfDays * numberOfHours) : 0;                
             });
-
-            /*
-            Highcharts.chart('js_chart', {
-
-                title: {
-                    text: 'Station Capacity Utilization'
-                },
-
-                xAxis: {
-                    title: {
-                        text: 'Time'
-                    }
-                },
-
-                yAxis: {
-                    max: 1,
-                    title: {
-                        text: 'Percentage of capacity'
-                    }
-                },
-
-                plotOptions: {
-                    series: {
-                        pointStart: 0
-                    }
-                },
-
-                series: [{
-                    name: 'Utilization',
-                    data: results['plots'][106],
-                }]
-
-            });  
-            */       
               
-            var description = '<div class="results_title">Mean capacity utilization</div>';
+            var description = '<div class="results_title">Capacity utilization</div>';
             description += printTopStations(results['averages'], true, maxStations, true, '(utilization estimated as a percentage of the peak observed hourly number of start+stops)');
                     
             return {'utilization': results['averages'], 'description': description};
@@ -959,9 +921,9 @@ function setupFilters(defaults) {
             var tooltip = button['tooltip'];
         
             if (tooltip) {
-                filters += "<button class='btn btn-default js_" + group + "' id='" + id + "' title='" + tooltip + "'>" + label + "</button>";
+                filters += "<button class='btn btn-default btn-sm js_" + group + "' id='" + id + "' title='" + tooltip + "'>" + label + "</button>";
             } else {
-                filters += "<button class='btn btn-default js_" + group + "' id='" + id + "'>" + label + "</button>";        
+                filters += "<button class='btn btn-default btn-sm js_" + group + "' id='" + id + "'>" + label + "</button>";        
             }            
         });
     
@@ -1208,14 +1170,7 @@ function showStationStatistic(forStatistic, properties) {
                 var options = illustrations[forStatistic].markerOptions;
         
                 if (!useRawMarkerSize) {
-                    markerSize = markerScale ? $("#js_markerSlider").slider("option", "value") * markerSize * Math.sqrt(defaultMarkerRadius / markerScale) : 0;
-                    
-                    // enforce minimum marker size                    
-                    /*
-                    if (map.getZoom() < MIN_ZOOM_DEFAULT_MARKER && markerSize < defaultMarkerRadius) {
-                        markerSize = defaultMarkerRadius * 10;
-                    }
-                    */
+                    markerSize = markerScale ? markerZoom * markerSize * Math.sqrt(defaultMarkerRadius / markerScale) : 0;
                 }
 
                 var cluster = "default";
@@ -1383,7 +1338,10 @@ function addToMap(new_map) {
 	map.getPane('data').style.zIndex = 299;
 
 	// redraw points after zoom
-	map.on('zoomend', redraw);
+	map.on('zoomend', function() {
+	    console.log(map.getBounds());
+	    redraw();
+	});
 
     // load data source
 	var ret = DataSource.loadData("data/trips.bin", "data/stations.json")
@@ -1394,6 +1352,20 @@ function addToMap(new_map) {
 			
             // draw all station markers
             showStations();
+        
+            // add "all stations" group
+            $("#js_stationList").append("<li><a id='js_stations_select'>Select All</a></li><li class='divider'></li>");
+            $("#js_stations_select").on("click", function() {
+                selectAllStations = true;
+                selectedFilters['stationStart'] = {};
+                Object.keys(Hubway.stations).forEach(function(id) {
+                    selectStation(id);
+                });
+                $("#js_description").html('<div class="results_title">All Bike Stations Selected</div>');
+                selectAllStations = false;
+        
+                redraw();
+            });
         
             for (var index = 0; index < stationGroups.length; index++) {
 
@@ -1408,7 +1380,9 @@ function addToMap(new_map) {
                         removeStation(station);
                     });                
     
-                    var selectedItem = $(this).parent('li').index();
+                    // subtract the number of items already added to the stations list
+                    var selectedItem = $(this).parent('li').index() - 2;
+                    
                     stationGroups[selectedItem]['stops'].forEach(function(id) {
                         selectStation(id);
                     });
@@ -1419,7 +1393,7 @@ function addToMap(new_map) {
         
             // select default stations
             $("#js_stationGroup_0").trigger("click");
-            displaySelectedStationsText();			
+            displaySelectedStationsText();            	
 
             // remove loading
             loading.remove();
@@ -1431,18 +1405,6 @@ function addToMap(new_map) {
 
 	// draw station button
 	$("#js_stations_reset").on("click", resetMap);
-
-	$("#js_stations_select").on("click", function() {
-        selectAllStations = true;
-	    selectedFilters['stationStart'] = {};
-	    Object.keys(Hubway.stations).forEach(function(id) {
-	        selectStation(id);
-	    });
-	    $("#js_description").html('<div class="results_title">All Bike Stations Selected</div>');
-	    selectAllStations = false;
-        
-        redraw();
-	});
 	
 	// set up clusters dropdown
     kMeansGroups.forEach(function(label) {
@@ -1472,7 +1434,7 @@ function addToMap(new_map) {
 	    }
 	    
 	    var name = illustrations[query]['buttonName'] ? illustrations[query]['buttonName'] : query;
-	    var button = '<button class="btn btn-default js_query" id="js_' + query + '">' + name + '</button>';
+	    var button = '<button class="btn btn-default btn-sm js_query" id="js_' + query + '">' + name + '</button>';
 	    $("#js_queries").append(button);
 
 
@@ -1481,19 +1443,16 @@ function addToMap(new_map) {
 	    });
 	});
 	
-    $("#js_markerSlider").slider({
-        min: 1,
-        max: 20,
-        step: 1,
-        value: 10,
-        range: false,
-        slide: function(event, ui) {
-            $("#js_markerSlider").slider("value", ui.value);
-            redraw();
-        }
-    });
+	$("#js_markerSize_minus").on("click", function() {
+    	markerZoom /= 2;
+    	redraw();
+	});
+
+	$("#js_markerSize_plus").on("click", function() {
+    	markerZoom *= 2;
+    	redraw();
+	});
 	
-	    
     // lay out filters
     setupFilters({
         'js_year_2016':true,
@@ -1607,7 +1566,7 @@ root.ExploreTool = {
 	    }
     },
     setMarkerSize: function(marker_size, should_redraw) {
-	    $("#js_markerSlider").slider("value", marker_size);
+        markerScale = marker_size;
 
 	    if ("undefined" === typeof should_redraw || false !== should_redraw) {
 		    redraw();

@@ -87,6 +87,7 @@
                         Burlington, near Fenway.</p>
                 </div>
             </div>
+
             <div class="story-pane" data-pane="under-util-dana-park">
                 <h2>Dana Park, Cambridge</h2>
                 <div class="story-body">
@@ -99,6 +100,36 @@
                         to other nearby stations?</p>
                 </div>
             </div>
+
+            <div class="story-pane" data-pane="under-util-east-cambridge">
+                <h2>East Cambridge</h2>
+                <div class="story-body">
+                    <p>East Cambridge exhibits similar trends to Cambridgeport: it is relatively underserved by public 
+                    transportation based on commute times, and Hubway often is the fastest mode of transit. Why are the 
+                    Kendall area stations underused?</p>
+                </div>
+            </div>
+            
+            <div class="story-pane" data-pane="under-util-brookline">
+                <h2>Brookline at Burlington St</h2>
+                <div class="story-body">
+                    <p>Brookline at Burlington, near Fenway, is <a data-story-alt="default">oddly underutilized</a>. 
+                    Additionally, <a data-story-alt="popular">the most popular routes from this station</a> are to relatively far stations. Perhaps the 
+                    dead-end location of this station makes it inconvenient to access or difficult to discover?</p>
+                </div>
+            </div>
+            
+            <div class="story-pane" data-pane="under-util-boston">
+                <h2>Winter Availability in Boston</h2>
+                <div class="story-body">
+                    <p>Analyzing utilization rates also led us to wonder why Boston shuts down some of its Hubway stations 
+                    in the winter when Cambridge does not. <a data-story-alt="default">Utilization rates for Cambridge and Boston</a>
+                    are fairly similar, and although <a data-story-alt="winter">winter utilization</a> is the lowest of any time of the year, riders 
+                    still use Hubway in Cambridge. Perhaps if Boston left its stations open, riders would continue to use those
+                    stations as well?</p>
+                </div>
+            </div>
+                        
         </div>
         <div class="story-nav story-prev"><a href="#" data-story-nav="prev">Previous</a></div>
         <div class="story-nav story-next"><a href="#" data-story-nav="next">Next</a></div>
@@ -113,23 +144,29 @@
             <div class="panel-body">
                 <!-- start explore interface -->
                 <div class="filter btn-group" role="button">
-                    <button class="btn btn-default js_query" id="js_stations_reset">Reset</button><button class="btn btn-default js_query" id="js_stations_select">All Stations</button>
+                    <button class="btn btn-default btn-sm js_query" id="js_stations_reset">Reset</button>
 
                     <div class="btn-group" role="button">
-                        <button class="btn btn-default btn-group dropdown-toggle" type="button" id="js_stations" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            Station groups
+                        <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_stations" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            Stations
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList"></ul>
                     </div>
 
                     <div class="btn-group" role="button">
-                        <button class="btn btn-default btn-group dropdown-toggle" type="button" id="js_kMeans" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            Cluster results...
+                        <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_kMeans" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            Clusters
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu2" id="js_kMeansGroups"></ul>
                     </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-default btn-sm btn-group" id="js_markerSize_minus">-</button>
+                        <button class="btn btn-default btn-sm btn-group" id="js_markerSize_plus">+</button>
+                    </div>
+                    
                 </div>
 
                 <div class="filter" id="js_queries"></div>
@@ -158,15 +195,15 @@
                 <form>
                     <div id="transit-source">
                         <div class="btn-group" role="group" aria-label="Mode to display on the map.">
-                            <button type="button" class="btn btn-default active" data-source="data/directions-s.json">City Center</button>
-                            <button type="button" class="btn btn-default" data-source="data/directions-l.json">Metro Area</button>
+                            <button type="button" class="btn btn-default btn-sm active" data-source="data/directions-s.json">City Center</button>
+                            <button type="button" class="btn btn-default btn-sm" data-source="data/directions-l.json">Metro Area</button>
                         </div>
                     </div>
 
                     <div id="map-mode">
                         <div class="btn-group" role="group" aria-label="Mode to display on the map.">
-                            <button type="button" class="btn btn-default active" data-mode="mode">Fastest Transit</button>
-                            <button type="button" class="btn btn-default" data-mode="time">Travel Time</button>
+                            <button type="button" class="btn btn-default btn-sm active" data-mode="mode">Fastest Transit</button>
+                            <button type="button" class="btn btn-default btn-sm" data-mode="time">Travel Time</button>
                         </div>
                     </div>
 

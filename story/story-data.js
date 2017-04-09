@@ -53,6 +53,55 @@ jQuery(function($) {
 		}
 	});
 
+	Story.getPane("under-util-east-cambridge").configure({
+		map: {
+			view: "default",
+			toolTransit: {
+				start: 5873,
+				resize: false
+			}
+		}
+	});
+
+	Story.getPane("under-util-brookline").configure({
+		map: {
+			view: [[42.339450396797275, -71.1198663711548], [42.35886103664428, -71.08295917510988]],
+            toolExplore: {
+				statistic: "utilization",
+				clusters: 7
+			}        
+		}
+	}).addAlternate("popular", {
+		map: {
+			view: [[42.33215399891373, -71.12051010131837], [42.370973789813014, -71.04669570922853]],
+			toolExplore: {
+			    stations: [47],
+			    statistic: "popular-routes",
+			}
+		}
+	});
+	
+	Story.getPane("under-util-boston").configure({
+		map: {
+			view: "default",
+            toolExplore: {
+				statistic: "utilization",
+				clusters: 7
+			}        
+		}
+	}).addAlternate("winter", {
+		map: {
+			view: "default",
+			toolExplore: {
+			    filter: {
+			        season: "winter"
+			    },
+			    statistic: "utilization",
+			}
+		}
+	});;	
+
+
 	/*
 	Story.getPane("two").configure({
 		map: {
