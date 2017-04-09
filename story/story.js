@@ -495,7 +495,7 @@
 
 			// resize panes
 			for (var i = 0; i < panes.length; ++i) {
-				panes[i].$el.height(pane_height);
+				panes[i].$el.css("height", pane_height);
 			}
 
 			// adjust active
