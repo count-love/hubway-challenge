@@ -97,7 +97,8 @@ jQuery(function($) {
 			view: [[42.36009778602673, -71.11192703247072], [42.37427109825652, -71.0750198364258]],
 			toolExplore: {
 				statistic: "utilization",
-				clusters: 7
+				clusters: 7,
+				highlightStation: 157
 			}
 		}
 	});
@@ -291,6 +292,7 @@ jQuery(function($) {
 	
 	Story.getPane("funFacts-work-life").configure({
 	    map: {
+	        view: "default",
 	        toolExplore: {
 	            filter: {
 	                day: "morning"
