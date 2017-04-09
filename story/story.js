@@ -206,11 +206,11 @@
 
 		// start by animating to closest
 		var new_active;
-		if (distance_abs < 0.05 * pane_height) {
+		if (distance_abs < 0.15 * pane_height) {
 			// snap back to position
 			new_active = active;
 		}
-		else if (distance_abs < 0.55 * pane_height) {
+		else if (distance_abs < 1.55 * pane_height || true) {
 			// move forward or backwards one step based on momentum
 			new_active = active + (distance < 0 ? 1 : -1);
 		}
