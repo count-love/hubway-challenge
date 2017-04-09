@@ -9,14 +9,14 @@ jQuery(function($) {
 		map: {
 			view: "default",
 			toolExplore: {
-				statistic: "starts",
+				statistic: "starts"
 			}
 		}
 	}).addAlternate("stops", {
 		map: {
 			view: "default",
 			toolExplore: {
-				statistic: "stops",
+				statistic: "stops"
 			}
 		}
 	});
@@ -90,7 +90,7 @@ jQuery(function($) {
 			view: [[42.33215399891373, -71.12051010131837], [42.370973789813014, -71.04669570922853]],
 			toolExplore: {
 			    stations: [47],
-			    statistic: "popular-routes",
+			    statistic: "popular-routes"
 			}
 		}
 	});
