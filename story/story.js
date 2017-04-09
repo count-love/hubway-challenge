@@ -5,7 +5,7 @@
 	};
 
 	var $story, $container, $explore;
-	var panes = [], active = -1;
+	var panes = [], pane_index = {}, active = -1;
 	var map;
 
 	// blocking modes
@@ -252,6 +252,14 @@
 			distance += scroll_offset_last;
 		}
 
+		// limit scrolling to one pane
+		if (distance < (0 - pane_height)) {
+			distance = 0 - pane_height;
+		}
+		else if (distance > pane_height) {
+			distance = pane_height;
+		}
+
 		// new top
 		var top = pane_height * (0 - active) + distance;
 
@@ -355,9 +363,14 @@
 				break;
 
 			case "transit":
+				var default_start = [42.350932577852824, -71.08943939208986];
 				if (layer_transit) {
 					// already loaded
 					layer_transit.options.listenClick = true;
+
+					// show overlay
+					layer_transit.buildOverlay(layer_transit.getStart() || default_start);
+					Story.showOverlay("Click the map to set a new start location.", "info");
 				}
 				else {
 					loading = _createLoadingOverlay(map.getContainer());
@@ -369,6 +382,8 @@
 							// listen for click
 							if (layer_transit) {
 								layer_transit.options.listenClick = true;
+								layer_transit.buildOverlay(default_start);
+								Story.showOverlay("Click the map to set a new start location.", "info");
 							}
 						});
 				}
@@ -438,6 +453,11 @@
 				return pane;
 			});
 
+			// make panes index
+			panes.forEach(function(pane) {
+				pane_index[pane.name] = pane;
+			});
+
 			// append indicators
 			indicators.appendTo($story).on("click", "li", function() {
 				var index = $(this).index();
@@ -471,6 +491,7 @@
 				}
 			});
 			$story.on("click", "[data-story-alt]", onClickAlternate);
+			$story.on("click", "[data-story-mode]", onClickMode);
 		},
 		setupTabs: function(el) {
 			$(el).on("click", "[data-story-mode]", onClickMode);
@@ -532,10 +553,8 @@
 
 			// string
 			if ("string" === typeof index_or_name) {
-				for (var i = 0; i < panes.length; ++i) {
-					if (index_or_name === panes[i].name) {
-						return panes[i];
-					}
+				if (index_or_name in pane_index) {
+					return pane_index[index_or_name];
 				}
 			}
 
@@ -553,13 +572,13 @@
 					installed_explore = true;
 				})
 				.fail(function() {
-					Story.showOverlayError("Unable to load ride information. Please try refreshing.");
+					Story.showOverlay("Unable to load ride information. Please try refreshing.");
 				});
 		},
 		configureExploreLayer: function(config) {
 			if (false === config) {
 				// close in explore
-				$("#tool-explore").removeClass("in");
+				$("#tool-explore").removeClass("in").css("height", "0px");
 
 				// if installed? send clear message
 				if (installed_explore) {
@@ -570,7 +589,7 @@
 			}
 
 			// close in explore
-			$("#tool-explore").addClass("in");
+			$("#tool-explore").addClass("in").css("height", "auto");
 
 			// install
 			return $.when(this.installExploreLayer()).done(function() {
@@ -629,15 +648,15 @@
 					.done(function() {
 						layer_transit.on("clickoutside", function() {
 							if ("data/directions-s.json" === transit_source) {
-								Story.showOverlayError("The current transit information is limited to the city center. Switch to the metro area to explore a larger area.");
+								Story.showOverlay("The current transit information is limited to the city center. Switch to the metro area to explore a larger area.");
 							}
 							else {
-								Story.showOverlayError("We do not have transit or bike data in that area. Stick a little closer to Boston for best results.");
+								Story.showOverlay("We do not have transit or bike data in that area. Stick a little closer to Boston for best results.");
 							}
 						});
 					})
 					.fail(function() {
-						Story.showOverlayError("Unable to load transit information. Please try refreshing.");
+						Story.showOverlay("Unable to load transit information. Please try refreshing.");
 					});
 			}
 
@@ -646,7 +665,7 @@
 		configureTransitLayer: function(config) {
 			if (false === config) {
 				// close in explore
-				$("#tool-transit").removeClass("in");
+				$("#tool-transit").removeClass("in").css("height", "0px");
 
 				// if installed? clear layer
 				if (layer_transit) {
@@ -657,7 +676,7 @@
 			}
 
 			// open in explore
-			$("#tool-transit").addClass("in");
+			$("#tool-transit").addClass("in").css("height", "auto");
 
 			// install
 			return $.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {
@@ -727,8 +746,8 @@
 				}
 			}
 		},
-		showOverlayError: function(message, tm) {
-			var msg = $('<div class="overlay-warning"></div>').text(message).appendTo("body");
+		showOverlay: function(message, message_class, tm) {
+			var msg = $('<div class="overlay"></div>').addClass("overlay-" + (message_class || "warning")).text(message).appendTo("body");
 			msg.fadeIn(200, function() {
 				var tmout, close = function() {
 					msg.fadeOut(400, function() {

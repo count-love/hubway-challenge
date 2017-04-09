@@ -985,10 +985,10 @@ function showStations() {
         var row = Hubway.stations[id];
         
         var description = '['+ id + '] ' + row.name + ', ' + row['docks'] + ' bikes';        
-        marker = addMarker(row.latitude, row.longitude, description, "default", 10 * defaultMarkerRadius, markerOptions.default);
+        var marker = addMarker(row.latitude, row.longitude, description, "default", 10 * defaultMarkerRadius, markerOptions.default);
         marker.setStyle(markerOptions.stationUnselected);
 
-        marker.bindPopup(description);
+        marker.bindPopup(description, {autoPan: false});
         marker.on('mouseover', function (e) { this.openPopup(); });
         marker.on('mouseout', function (e) { this.closePopup(); });
 
@@ -1184,7 +1184,7 @@ function showStationStatistic(forStatistic, properties) {
                     station.latitude, station.longitude, description, 
                     cluster, markerSize, illustrations[forStatistic].markerOptions); 
     
-                marker.bindPopup(description);
+                marker.bindPopup(description, {autoPan: false});
                 marker.on('mouseover', function (e) { this.openPopup(); });
                 marker.on('mouseout', function (e) { this.closePopup(); });
            });
