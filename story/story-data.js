@@ -3,6 +3,7 @@ jQuery(function($) {
 	Story.setupPage("#story");
 	Story.setupController("#sidebar-info");
 	Story.setupExploreTool("#sidebar-tools");
+	Story.swapSwappables();
 
 	Story.getPane("intro").configure({
 		map: {

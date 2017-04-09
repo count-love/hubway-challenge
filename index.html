@@ -6,6 +6,12 @@
 
     <title>Hubway</title>
 
+    <meta property="og:description" content="As engineers and scientists with a keen interest in civic responsibility and public policy, we set out to find the unusual and the extraordinary in the last six years of Hubway data.">
+    <meta property="og:title" content="The Extraordinary in the Hubway Data">
+    <meta property="og:url" content="https://hubway.countlove.org/">
+    <meta property="og:image" content="https://hubway.countlove.org/img/opengraph.png">
+    <meta property="og:type" content="website">
+
     <link rel="icon" href="img/favicon.ico">
     <link rel="icon" href="img/favicon-196x196.png" type="image/png" size="196x196">
 
@@ -73,7 +79,7 @@
                 </div>
             </div>
             <div class="story-pane" data-pane="under-util-2">
-                <h2>Do riders under-utilize particular stations inside the city?</h2>
+                <h2>Do riders underutilize particular stations inside the city?</h2>
                 <div class="story-body">
                     <p>To answer this question, we measured each station’s “utilization” by summing its total 
                         trip starts and ends over a fixed time period and then dividing by the total 
@@ -84,7 +90,7 @@
                     stations together by their utilization rates and assigning distinct colors 
                     to each group made it easier to find stations with unusual usage. Considering 
                     only stations that have been in operation for at least one year, we found the 
-                    following under-utilized stations:</p>
+                    following underutilized stations:</p>
                         
                     <ol>
                         <li><a data-story-alt="danaPark">Dana Park</a>, in Cambridgeport;</li>
@@ -95,7 +101,7 @@
             </div>
 
             <div class="story-pane" data-pane="under-util-dana-park">
-                <h2>Under-utilization: Dana Park, Cambridgeport</h2>
+                <h2>Underutilization: Dana Park, Cambridgeport</h2>
                 <div class="story-body">
                     <p>Relative to other Hubway stations in Cambridgeport and Central Square, 
                        the <a data-story-alt="danaParkUtilization">utilization rate for Dana Park</a> 
@@ -111,7 +117,7 @@
                         From Cambridgeport, Hubway often is the fastest mode of transportation to Somerville, 
                         Cambridge, Boston, and Brookline. Only a few distant destinations, like Chelsea and East Boston, 
                         are faster via subway. Given this time advantage, why does the Dana Park station 
-                        seem to be under-utilized relative to nearby stations?</p>
+                        seem to be underutilized relative to nearby stations?</p>
                         
                     <p>*Our model is pessimistic and always assumes that someone 
                         shows up halfway between buses during normal (median) operating schedules. During peak-time travel times 
@@ -125,7 +131,7 @@
                     <p>East Cambridge exhibits similar trends to Cambridgeport: <a data-story-alt="default">it is relatively 
                     underserved by public transportation based on commute times</a>, and Hubway often is the fastest mode of transit. 
                     Given this time difference, why are the Kendall area stations 
-                    <a data-story-alt="eastCambridgeUtilization">near Binney St. under-utilized 
+                    <a data-story-alt="eastCambridgeUtilization">near Binney St. underutilized
                     relative to other nearby stations</a>?</p>
                 </div>
             </div>
@@ -134,7 +140,7 @@
                 <h2>Underutilization: Brookline at Burlington St., Boston</h2>
                 <div class="story-body">
                     <p>In Boston, the Brookline at Burlington St. station near Fenway also appears to 
-                    be <a data-story-alt="default">under-utilized</a> relative to nearby stations. 
+                    be <a data-story-alt="default">underutilized</a> relative to nearby stations.
                     This particular station also has an additional unusual 
                     trait: when riders do use this station, <a data-story-alt="popular">they tend to 
                     bike to distant stops</a>. Perhaps the location of this 
@@ -179,7 +185,7 @@
                 <h2>Fun Facts</h2>
                 <div class="story-body">
                     <p>Although we've asked (hopefully interesting and useful) questions about
-                    potentially under-utilized stations and under-served areas, we've left a lot to explore! 
+                    potentially underutilized stations and underserved areas, we've left a lot to explore!
                     Below, we've included some of the fun facts
                         that we stumbled upon during our adventure to find the extraordinary in the Hubway data.
                         Read on to learn what we've found, or <a href="#" data-story-mode="explore">conduct your own
@@ -261,54 +267,6 @@
 </div>
 <div class="sidebar" id="sidebar-tools" style="display:none;">
     <div class="panel panel-default">
-        <div class="panel-heading" role="tab" id="tool-explore-head">
-            <h4 class="panel-title"><a role="button" data-toggle="collapse" href="#tool-explore" aria-expanded="true" aria-controls="tool-explore">Explore Trips</a></h4>
-        </div>
-        <div id="tool-explore" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-explore-head" data-story-layer="explore">
-            <div class="panel-body">
-                <!-- start explore interface -->
-                <div class="filter" role="button">
-                    <button class="btn btn-default btn-sm js_query" id="js_stations_reset">Reset</button>
-
-                    <div class="btn-group" role="button">
-                        <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_stations" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            Stations
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList"></ul>
-                    </div>
-
-                    <div class="btn-group" role="button">
-                        <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_kMeans" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" title="group similar results by color">
-                            Clusters
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu2" id="js_kMeansGroups"></ul>
-                    </div>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-default btn-sm btn-group" id="js_markerSize_minus" title="decrease marker size">-</button>
-                        <button class="btn btn-default btn-sm btn-group" id="js_markerSize_plus" title="increase marker size">+</button>
-                    </div>
-                </div>
-
-                <div class="filter" id="js_queries"></div>
-                <div class="filter" id="js_filters"></div>
-                <div class="filter">
-                    <div id="js_markerSlider" class="filter-slider"></div>
-                </div>
-
-                <hr>
-
-                <div class="filter">
-                    <div id="js_description"></div>
-                </div>
-                <!-- end explore interface -->
-            </div>
-        </div>
-    </div>
-
-    <div class="panel panel-default">
         <div class="panel-heading" role="tab" id="tool-transit-head">
             <h4 class="panel-title"><a role="button" data-toggle="collapse" href="#tool-transit" aria-expanded="true" aria-controls="tool-transit">Getting Around</a></h4>
         </div>
@@ -365,6 +323,54 @@
             </div>
         </div>
     </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading" role="tab" id="tool-explore-head">
+            <h4 class="panel-title"><a role="button" data-toggle="collapse" href="#tool-explore" aria-expanded="true" aria-controls="tool-explore">Explore Trips</a></h4>
+        </div>
+        <div id="tool-explore" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-explore-head" data-story-layer="explore">
+            <div class="panel-body">
+                <!-- start explore interface -->
+                <div class="filter" role="button">
+                    <button class="btn btn-default btn-sm js_query" id="js_stations_reset">Reset</button>
+
+                    <div class="btn-group" role="button">
+                        <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_stations" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            Stations
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList"></ul>
+                    </div>
+
+                    <div class="btn-group" role="button">
+                        <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_kMeans" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" title="group similar results by color">
+                            Clusters
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu2" id="js_kMeansGroups"></ul>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-default btn-sm btn-group" id="js_markerSize_minus" title="decrease marker size">-</button>
+                        <button class="btn btn-default btn-sm btn-group" id="js_markerSize_plus" title="increase marker size">+</button>
+                    </div>
+                </div>
+
+                <div class="filter" id="js_queries"></div>
+                <div class="filter" id="js_filters"></div>
+                <div class="filter">
+                    <div id="js_markerSlider" class="filter-slider"></div>
+                </div>
+
+                <hr>
+
+                <div class="filter">
+                    <div id="js_description"></div>
+                </div>
+                <!-- end explore interface -->
+            </div>
+        </div>
+    </div>
 </div>
 <div id="sidebar-info">
     <div class="visible-exploring">
@@ -375,7 +381,7 @@
     </div>
     <div class="details">
         <a href="#" data-toggle="modal" data-target="#about-modal">About</a> &bullet;
-        By <a href="https://www.tommyleung.com/about.htm">Tommy</a> &amp; <a href="https://www.nathanntg.com/">Nathan</a>.
+        By <a href="https://www.tommyleung.com/about.htm" class="swap">Tommy</a> &amp; <a href="https://www.nathanntg.com/" class="swap">Nathan</a>.
     </div>
 </div>
 <div class="modal fade" id="about-modal" tabindex="-1" role="dialog" aria-labelledby="about-modal-label">
@@ -386,8 +392,8 @@
                 <h4 class="modal-title" id="about-modal-label">About</h4>
             </div>
             <div class="modal-body">
-                <p>This page was created by <a href="https://www.tommyleung.com/" target="_blank">Tommy Leung</a> and
-                    <a href="https://www.nathanntg.com/" target="_blank">Nathan Perkins</a> as a submission
+                <p>This page was created by <a href="https://www.tommyleung.com/" target="_blank" class="swap">Tommy Leung</a> and
+                    <a href="https://www.nathanntg.com/" target="_blank" class="swap">Nathan Perkins</a> as a submission
                     to the <a href="https://www.thehubway.com/datachallenge" target="_blank">Hubway Data Challenge</a>.
                 </p>
                 <p><strong>Data cleaning.</strong> The Hubway data format has evolved over time, as have the stations.

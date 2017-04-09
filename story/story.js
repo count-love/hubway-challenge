@@ -496,6 +496,20 @@
 		setupController: function(el) {
 			$(el).on("click", "[data-story-mode]", onClickMode);
 		},
+		swapSwappables: function() {
+			$(".swap").parent().each(function() {
+				if (Math.random() > 0.5) {
+					var $el = $(this), links = $el.find(".swap"),
+						link_first = links.first(), link_second = links.last();
+
+					var temp = $('<span></span>');
+
+					link_first.before(temp);
+					link_second.before(link_first);
+					temp.after(link_second).remove();
+				}
+			});
+		},
 		setupExploreTool: function(el) {
 			// explore tool
 			$explore = $(el);
@@ -595,6 +609,13 @@
 					ExploreTool.setAllStations(false);
 				}
 
+				// no stastic? just draw stations
+				if (!config.statistic) {
+					ExploreTool.clearMap();
+					ExploreTool.showStations();
+					return;
+				}
+
 				// set number of clusters
 				ExploreTool.setClusters(config.clusters || 0, false);
 
@@ -621,12 +642,7 @@
 				ExploreTool.setFilters(filter_arr, false);
 
 				// set statistic
-				if (config.statistic) {
-					ExploreTool.setActiveStatistic(config.statistic, true);
-				}
-				else {
-					ExploreTool.showStations();
-				}
+				ExploreTool.setActiveStatistic(config.statistic, true);
 			});
 		},
 		installTransitLayer: function(source) {

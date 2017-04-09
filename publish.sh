@@ -30,9 +30,10 @@ cp -f data/stations.json build/data/stations.json
 cp -f img/bike.svg build/img/bike.svg
 cp -f img/favicon.ico build/img/favicon.ico
 cp -f img/favicon-196x196.png build/img/favicon-196x196.png
+cp -f img/opengraph.png build/img/opengraph.png
 
 # html
-cp -f .htaccess build/.htaccess
+cp -f htaccess build/.htaccess
 cp -f index.html build/index.html
 
 # rsync -avzc build/ countlove@countlove.org:hubway.countlove.org/
