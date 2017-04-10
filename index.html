@@ -266,9 +266,10 @@
     </div>
 </div>
 <div class="sidebar" id="sidebar-tools" style="display:none;">
+    <div class="panel-group" id="tool-accordion" role="tablist" aria-multiselectable="true">
     <div class="panel panel-default">
         <div class="panel-heading" role="tab" id="tool-transit-head">
-            <h4 class="panel-title"><a role="button" data-toggle="collapse" href="#tool-transit" aria-expanded="true" aria-controls="tool-transit">Getting Around</a></h4>
+            <h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#tool-accordion" href="#tool-transit" aria-expanded="true" aria-controls="tool-transit">Getting Around</a></h4>
         </div>
         <div id="tool-transit" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-transit-head" data-story-layer="transit">
             <div class="panel-body">
@@ -326,7 +327,7 @@
 
     <div class="panel panel-default">
         <div class="panel-heading" role="tab" id="tool-explore-head">
-            <h4 class="panel-title"><a role="button" data-toggle="collapse" href="#tool-explore" aria-expanded="true" aria-controls="tool-explore">Explore Trips</a></h4>
+            <h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#tool-accordion" href="#tool-explore" aria-expanded="true" aria-controls="tool-explore">Explore Trips</a></h4>
         </div>
         <div id="tool-explore" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-explore-head" data-story-layer="explore">
             <div class="panel-body">
@@ -370,6 +371,7 @@
                 <!-- end explore interface -->
             </div>
         </div>
+    </div>
     </div>
 </div>
 <div id="sidebar-info">
