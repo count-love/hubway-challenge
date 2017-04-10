@@ -353,5 +353,5 @@ jQuery(function($) {
 	});
 
 	// set initial pane
-	Story.setActivePane(0, false);
+	Story.launch(0);
 });

@@ -35,6 +35,27 @@
 		};
 	}
 
+	function getUrlParameters() {
+		var variables = location.search.substring(1).split("&");
+		var ret = {};
+
+		for (var i = 0; i < variables.length; ++i) {
+
+			var cur = variables[i].split('=');
+			var name = decodeURIComponent(cur[0]);
+			if (cur) {
+				if (1 === cur.length) {
+					ret[name] = true;
+				}
+				else {
+					ret[name] = decodeURIComponent(cur[1].replace(/\+/g, ' '));
+				}
+			}
+		}
+
+		return ret;
+	}
+
 	function _configurePaneActive(pane, active) {
 		pane.$indicator.toggleClass("active", active);
 		pane.$el.toggleClass("inactive", !active);
@@ -543,6 +564,20 @@
 					_transitionToIndex(index, animate);
 				}
 			}
+		},
+		launch: function(default_pane) {
+			var params = getUrlParameters();
+
+			// initial pane
+			if (params.pane) {
+				var pane = this.getPane(params.pane);
+				if (pane) {
+					this.setActivePane(pane, false);
+					return;
+				}
+			}
+
+			this.setActivePane(default_pane || 0, false);
 		},
 		getPane: function(index_or_name) {
 			// number? treat as index
