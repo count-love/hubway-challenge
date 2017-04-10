@@ -914,7 +914,6 @@ function setupFilters(defaults) {
     
         // add buttons to the DOM
         $("#js_"+group).html(filters);
-	    $(".btn").tooltip({container: "#js_filters"});
     
         // attach event handlers
         queryFilters[group].forEach(function(button) {
@@ -951,6 +950,8 @@ function setupFilters(defaults) {
                         
         });
     });
+	
+	$(".btn").tooltip({container: "body"});
 }
 
 // update filter buttons to show the current query
