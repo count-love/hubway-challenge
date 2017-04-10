@@ -210,7 +210,8 @@
 
 			// outside of grid?
 			if (-1 === start_gc) {
-				this.clearOverlay();
+				this._result = false;
+				this.redraw();
 				return false;
 			}
 
@@ -363,6 +364,7 @@
 		 */
 		clearOverlay: function() {
 			this._result = false;
+			this._start = null;
 			this.redraw();
 		},
 		refreshOverlay: function() {
