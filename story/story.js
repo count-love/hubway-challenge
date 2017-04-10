@@ -158,7 +158,7 @@
 			$st.show();
 
 			// start exploration
-			if (layer_transit) {
+			if (layer_transit && layer_transit.getStart()) {
 				layer_transit.options.listenClick = true;
 				Story.showOverlay("Click the map to set a new start location.", "info");
 			}
