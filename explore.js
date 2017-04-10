@@ -1119,8 +1119,6 @@ function showStationStatistic(forStatistic, properties) {
         
         // save results to the cache 
         illustrationCache[cacheKey] = queryResults;
-        
-        console.log(JSON.stringify(illustrationCache));
     }
 
     // assign clusters colors in order for consistency
@@ -1403,7 +1401,7 @@ function addToMap(new_map) {
 		})
 		.fail(function(err) {
 			// TODO: error handling
-			console.log("ERROR:", err);
+			//console.log("ERROR:", err);
 		});
 
 	// draw station button
