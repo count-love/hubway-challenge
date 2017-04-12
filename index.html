@@ -266,112 +266,103 @@
     </div>
 </div>
 <div class="sidebar" id="sidebar-tools" style="display:none;">
-    <div class="panel-group" id="tool-accordion" role="tablist" aria-multiselectable="true">
-    <div class="panel panel-default">
-        <div class="panel-heading" role="tab" id="tool-transit-head">
-            <h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#tool-accordion" href="#tool-transit" aria-expanded="true" aria-controls="tool-transit">Getting Around</a></h4>
-        </div>
-        <div id="tool-transit" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-transit-head" data-story-layer="transit">
-            <div class="panel-body">
-                <!-- start transit interface -->
-                <p>Click where you will be starting your trip, and see the best transit mode and travel times.</p>
+    <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active"><a href="#tool-explore" role="tab" data-toggle="tab" data-story-layer="explore">Trips</a></li>
+        <li role="presentation"><a href="#tool-transit" role="tab" data-toggle="tab" data-story-layer="transit">Transit</a></li>
+    </ul>
 
-                <form>
-                    <div id="transit-source">
-                        <div class="btn-group" role="group" aria-label="Mode to display on the map.">
-                            <button type="button" class="btn btn-default btn-sm active" data-source="data/directions-s.json">City Center</button>
-                            <button type="button" class="btn btn-default btn-sm" data-source="data/directions-l.json">Metro Area</button>
-                        </div>
-                    </div>
+    <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="tool-explore">
+            <!-- start explore interface -->
+            <div class="filter" role="button">
+                <button class="btn btn-default btn-sm js_query" id="js_stations_reset">Reset</button>
 
-                    <div id="map-mode">
-                        <div class="btn-group" role="group" aria-label="Mode to display on the map.">
-                            <button type="button" class="btn btn-default btn-sm active" data-mode="mode">Fastest Transit</button>
-                            <button type="button" class="btn btn-default btn-sm" data-mode="time">Travel Time</button>
-                        </div>
-                    </div>
+                <div class="btn-group" role="button">
+                    <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_stations" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        Stations
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList"></ul>
+                </div>
 
-                    <div id="transit-modes">
-                        <strong>Include Transit Modes</strong>
-                        <div class="checkbox">
-                            <label><input type="checkbox" value="bike" checked> Hubway</label>
-                        </div>
-                        <div class="checkbox">
-                            <label><input type="checkbox" value="mbta_subway" checked> Subway</label>
-                        </div>
-                        <div class="checkbox">
-                            <label><input type="checkbox" value="mbta_bus" checked> Bus</label>
-                        </div>
-                        <div class="checkbox">
-                            <label><input type="checkbox" value="mbta_commuter" checked> Commuter Line</label>
-                        </div>
-                    </div>
+                <div class="btn-group" role="button">
+                    <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_kMeans" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" title="group similar results by color">
+                        Clusters
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu2" id="js_kMeansGroups"></ul>
+                </div>
 
-                    <div id="bike-speed">
-                        <p><strong>Bike Speed</strong> Time between bike stations is estimated based on Hubway's data, but you can fine tune which data to use.</p>
-                        <div class="radio">
-                            <label><input type="radio" name="bikespeed" value="0" checked> Average Hubway member (~8.6 miles per hour)</label>
-                        </div>
-                        <div class="radio">
-                            <label><input type="radio" name="bikespeed" value="1"> Average Hubway casual user (~6.8 miles per hour)</label>
-                        </div>
-                        <div class="radio">
-                            <label><input type="radio" name="bikespeed" value="2"> Google estimated bike time (~9.4 miles per hour)</label>
-                        </div>
-                    </div>
-                </form>
-                <!-- end transit interface -->
+                <div class="btn-group">
+                    <button class="btn btn-default btn-sm btn-group" id="js_markerSize_minus" title="decrease marker size">-</button>
+                    <button class="btn btn-default btn-sm btn-group" id="js_markerSize_plus" title="increase marker size">+</button>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <div class="panel panel-default">
-        <div class="panel-heading" role="tab" id="tool-explore-head">
-            <h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#tool-accordion" href="#tool-explore" aria-expanded="true" aria-controls="tool-explore">Explore Trips</a></h4>
-        </div>
-        <div id="tool-explore" class="panel-collapse collapse" role="tabpanel" aria-labelledby="tool-explore-head" data-story-layer="explore">
-            <div class="panel-body">
-                <!-- start explore interface -->
-                <div class="filter" role="button">
-                    <button class="btn btn-default btn-sm js_query" id="js_stations_reset">Reset</button>
-
-                    <div class="btn-group" role="button">
-                        <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_stations" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            Stations
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu1" id="js_stationList"></ul>
-                    </div>
-
-                    <div class="btn-group" role="button">
-                        <button class="btn btn-default btn-sm btn-group dropdown-toggle" type="button" id="js_kMeans" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" title="group similar results by color">
-                            Clusters
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu scrollable-menu" aria-labelledby="dropdownMenu2" id="js_kMeansGroups"></ul>
-                    </div>
-
-                    <div class="btn-group">
-                        <button class="btn btn-default btn-sm btn-group" id="js_markerSize_minus" title="decrease marker size">-</button>
-                        <button class="btn btn-default btn-sm btn-group" id="js_markerSize_plus" title="increase marker size">+</button>
-                    </div>
-                </div>
-
-                <div class="filter" id="js_queries"></div>
-                <div class="filter" id="js_filters"></div>
-                <div class="filter">
-                    <div id="js_markerSlider" class="filter-slider"></div>
-                </div>
-
-                <hr>
-
-                <div class="filter">
-                    <div id="js_description"></div>
-                </div>
-                <!-- end explore interface -->
+            <div class="filter" id="js_queries"></div>
+            <div class="filter" id="js_filters"></div>
+            <div class="filter">
+                <div id="js_markerSlider" class="filter-slider"></div>
             </div>
+
+            <hr>
+
+            <div class="filter">
+                <div id="js_description"></div>
+            </div>
+            <!-- end explore interface -->
         </div>
-    </div>
+
+        <div role="tabpanel" class="tab-pane active" id="tool-transit">
+            <!-- start transit interface -->
+            <p>Click where you will be starting your trip, and see the best transit mode and travel times.</p>
+
+            <form>
+                <div id="transit-source">
+                    <div class="btn-group" role="group" aria-label="Mode to display on the map.">
+                        <button type="button" class="btn btn-default btn-sm active" data-source="data/directions-s.json">City Center</button>
+                        <button type="button" class="btn btn-default btn-sm" data-source="data/directions-l.json">Metro Area</button>
+                    </div>
+                </div>
+
+                <div id="map-mode">
+                    <div class="btn-group" role="group" aria-label="Mode to display on the map.">
+                        <button type="button" class="btn btn-default btn-sm active" data-mode="mode">Fastest Transit</button>
+                        <button type="button" class="btn btn-default btn-sm" data-mode="time">Travel Time</button>
+                    </div>
+                </div>
+
+                <div id="transit-modes">
+                    <strong>Include Transit Modes</strong>
+                    <div class="checkbox">
+                        <label><input type="checkbox" value="bike" checked> Hubway</label>
+                    </div>
+                    <div class="checkbox">
+                        <label><input type="checkbox" value="mbta_subway" checked> Subway</label>
+                    </div>
+                    <div class="checkbox">
+                        <label><input type="checkbox" value="mbta_bus" checked> Bus</label>
+                    </div>
+                    <div class="checkbox">
+                        <label><input type="checkbox" value="mbta_commuter" checked> Commuter Line</label>
+                    </div>
+                </div>
+
+                <div id="bike-speed">
+                    <p><strong>Bike Speed</strong> Time between bike stations is estimated based on Hubway's data, but you can fine tune which data to use.</p>
+                    <div class="radio">
+                        <label><input type="radio" name="bikespeed" value="0" checked> Average Hubway member (~8.6 miles per hour)</label>
+                    </div>
+                    <div class="radio">
+                        <label><input type="radio" name="bikespeed" value="1"> Average Hubway casual user (~6.8 miles per hour)</label>
+                    </div>
+                    <div class="radio">
+                        <label><input type="radio" name="bikespeed" value="2"> Google estimated bike time (~9.4 miles per hour)</label>
+                    </div>
+                </div>
+            </form>
+            <!-- end transit interface -->
+        </div>
     </div>
 </div>
 <div id="sidebar-info">

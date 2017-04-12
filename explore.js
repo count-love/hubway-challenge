@@ -1072,8 +1072,7 @@ function showStationStatistic(forStatistic, properties) {
     } else {
         // check loading
         if (!DataSource.isLoaded()) {
-            var loading = createLoadingOverlay(map.getContainer());
-            loading.text("Downloading 5,000,000 trips...");
+            var loading = createLoadingOverlay(map.getContainer(), "Downloading 5,000,000 trips...");
             DataSource.loadData("data/trips.bin", "data/stations.json")
                 .done(function() {
                     showStationStatistic(forStatistic, properties);
@@ -1274,7 +1273,7 @@ function removeMarkers() {
 }
 
 // add a "loading" message over the map
-function createLoadingOverlay(obj) {
+function createLoadingOverlay(obj, txt) {
 	var ret = $();
     	
 	$(obj).each(function() {
@@ -1287,7 +1286,7 @@ function createLoadingOverlay(obj) {
 		pos.lineHeight = pos.height + "px"; // same line height
 		
 		// configure overlay
-		var el = $('<div class="loading-overlay">Loading...</div>').insertAfter($obj).css(pos);
+		var el = $('<div class="loading-overlay"></div>').text(txt || "Loading...").insertAfter($obj).css(pos);
 		
 		// add element
 		ret = ret.add(el);
@@ -1300,7 +1299,7 @@ function createLoadingOverlay(obj) {
 function redraw() {
     if (activeStatistic) {
 
-     	var loading = createLoadingOverlay(map.getContainer());
+     	var loading = createLoadingOverlay(map.getContainer(), "Searching 5,000,000 trips...");
         setTimeout(function() { illustrations[activeStatistic].draw(); loading.remove(); }, 0);
     }
 }

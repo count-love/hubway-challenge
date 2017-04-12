@@ -325,6 +325,9 @@
 
 		switch (layer) {
 			case "explore":
+				// hide overlay
+				$("#map .overlay").fadeOut();
+
 				// already installed?
 				if (installed_explore) {
 					// show stations... TODO: might do weird things if something already drawn?
@@ -372,6 +375,17 @@
 						});
 				}
 		}
+	}
+
+	function updateExploreTab(tab, status) {
+		var $tab = $("[data-story-layer='" + tab + "']");
+
+		if (status) {
+			$(".nav-tabs > li, .tab-pane", "#sidebar-tools").filter(".active").removeClass("active");
+		}
+
+		$tab.closest("li").toggleClass("active", status);
+		$($tab.attr("href")).toggleClass("active", status);
 	}
 
 	var root = this;
@@ -536,8 +550,8 @@
 			$explore = $(el);
 
 			// listen for toggling collapsed
-			$explore.on("show.bs.collapse", onExploreEnable);
-			$explore.on("hide.bs.collapse", onExploreDisable);
+			$explore.on("show.bs.tab", onExploreEnable);
+			$explore.on("hide.bs.tab", onExploreDisable);
 
 			// add transit listeners
 			addTransitListeners();
@@ -614,7 +628,7 @@
 		configureExploreLayer: function(config) {
 			if (false === config) {
 				// close in explore
-				$("#tool-explore").removeClass("in").css("height", "0px");
+				updateExploreTab("none", false);
 
 				// if installed? send clear message
 				if (installed_explore) {
@@ -625,7 +639,7 @@
 			}
 
 			// close in explore
-			$("#tool-explore").addClass("in").css("height", "auto");
+			updateExploreTab("explore", true);
 
 			// install
 			return $.when(this.installExploreLayer()).done(function() {
@@ -711,7 +725,7 @@
 		configureTransitLayer: function(config) {
 			if (false === config) {
 				// close in explore
-				$("#tool-transit").removeClass("in").css("height", "0px");
+				updateExploreTab("transit", false);
 
 				// if installed? clear layer
 				if (layer_transit) {
@@ -721,7 +735,7 @@
 			}
 
 			// open in explore
-			$("#tool-transit").addClass("in").css("height", "auto");
+			updateExploreTab("transit", true);
 
 			// install
 			return $.when(this.installTransitLayer(config.source || "data/directions-s.json")).done(function() {

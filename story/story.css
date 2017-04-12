@@ -178,6 +178,11 @@ html, body {
     transition: opacity 0.5s ease-in-out;
 }
 
+/* space below explore tab */
+.nav-tabs {
+    margin-bottom: 15px;
+}
+
 /* header */
 header .logo {
     margin-top: 55px;
